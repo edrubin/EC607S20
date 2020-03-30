@@ -1,0 +1,9 @@
+*.RData
+*.rdb
+*.DS_Store
+.Rproj.user
+.Rhistory
+.Ruserdata
+
+ProblemSets/TODO
+ProblemSets/IDEAS
