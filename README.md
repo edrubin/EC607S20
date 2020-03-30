@@ -34,18 +34,18 @@ Runner up (the standard):
 
 ## Lecture slides
 
-*Note:* The linked slides (below) are `.html` files that will only work properly if you are connected to the internet. If you're going off grid (camping + metrics?), grab the PDFs. You'll miss out on gifs and interactive plots, but the equations will actually show up. I've removed the within-slide (incremental) pauses in the *(no pause)* slides.
+*Note:* The linked slides (below) are `.html` files that will only work properly if you are connected to the internet. If you're going off grid (camping + metrics?), grab the PDFs. You'll miss out on gifs and interactive plots, but the equations will actually show up. I've removed the within-slide (incremental) pauses in the *(no pauses)* PDF slides.
 
 The content of the lectures mainly follows *MHE* and [Michael Anderson](https://are.berkeley.edu/~mlanderson/ARE_Website/Home.html)—with additional inspiration from [Max Auffhammer](https://www.auffhammer.com) and many other sources.
 
 *Another note on the notes:* I create the slides with [`xaringan`](https://github.com/yihui/xaringan/wiki) in [R](cran.r-project.org). Thanks to [Grant McDermott](grantmcdermott.com/) for encouraging me to make this switch.
 
-**[Lecture 01: Research + R + You = 💖](https://raw.githack.com/edrubin/EC607S20/master/NotesLecture/01ResearchR/01ResearchR.html)**
+**[Lecture 01: Research + R + You = 💖](https://raw.githack.com/edrubin/EC607S20/master/NotesLecture/01-research-r/01-research-r.html)**
 
 1. An introduction to empirical research via applied econometrics.
 1. R: Light introduction—objects, functions, and help.
 
-**Note formats:** [.html](https://raw.githack.com/edrubin/EC607S20/master/NotesLecture/01ResearchR/01ResearchR.html) | [.html (no pause)](https://raw.githack.com/edrubin/EC607S20/master/NotesLecture/01ResearchR/01ResearchR_NoPause.html) | [.pdf](https://raw.githack.com/edrubin/EC607S20/master/NotesLecture/01ResearchR/01ResearchR.pdf) | [.pdf (no pause)](https://raw.githack.com/edrubin/EC607S20/master/NotesLecture/01ResearchR/01ResearchR_NoPause.pdf) | [.Rmd](https://raw.githack.com/edrubin/EC607S20/master/NotesLecture/01ResearchR/01ResearchR.Rmd)
+**Note formats:** [.html](https://raw.githack.com/edrubin/EC607S20/master/NotesLecture/01-research-r/01-research-r.html) | [.pdf (no pauses)](https://raw.githack.com/edrubin/EC607S20/master/NotesLecture/01-research-r/01-research-r.pdf) | [.Rmd](https://raw.githack.com/edrubin/EC607S20/master/NotesLecture/01-research-r/01-research-r.Rmd)
 <br>**Readings:** MHE preface + MHE chapter 1
 
 **Lecture 02: The Experimental Ideal**
