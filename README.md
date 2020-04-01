@@ -45,7 +45,10 @@ The content of the lectures mainly follows *MHE* and [Michael Anderson](https://
 1. An introduction to empirical research via applied econometrics.
 1. R: Light introduction—objects, functions, and help.
 
-**Note formats:** [.html](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/01-research-r/01-research-r.html) | [.pdf (no pauses)](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/01-research-r/01-research-r.pdf) | [.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/01-research-r/01-research-r.Rmd)
+**Note formats:** [.html](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/01-research-r/01-research-r.html) |
+[.pdf](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/01-research-r/01-research-r.pdf) |
+[.pdf (no pauses)](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/01-research-r/01-research-r-nopause.pdf) |
+[.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/01-research-r/01-research-r.Rmd)
 <br>**Readings:** MHE preface + MHE chapter 1
 
 **[Lecture 02: The Experimental Ideal](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/02-the-ideal/02-the-ideal.html)**
@@ -54,7 +57,10 @@ The content of the lectures mainly follows *MHE* and [Michael Anderson](https://
 1. Selection bias and experimental variation in treatment
 1. R: Object types/classes and package management.
 
-**Note formats:** [.html](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/02-the-ideal/02-the-ideal.html) | [.pdf](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/02-the-ideal/02-the-ideal.pdf) | [.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/02-the-ideal/02-the-ideal.Rmd)
+**Note formats:** [.html](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/02-the-ideal/02-the-ideal.html) |
+[.pdf](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/02-the-ideal/02-the-ideal.pdf) |
+[.pdf (no pauses)](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/02-the-ideal/02-the-ideal-nopause.pdf) | 
+[.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/02-the-ideal/02-the-ideal.Rmd)
 <br>**Readings:** MHE chapter 2
 
 **Lecture 03: Why Regression?**

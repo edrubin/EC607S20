@@ -149,6 +149,14 @@ tidy_table <- function(x, terms, highlight_row = 1, highlight_color = "black", h
 }
 ```
 
+```{css, echo = F, eval = F}
+@media print {
+  .has-continuation {
+    display: block !important;
+  }
+}
+```
+
 # Prologue
 
 ---
@@ -870,5 +878,6 @@ layout: false
 exclude: true
 
 ```{R, generate pdfs, include = F, eval = F}
-pagedown::chrome_print("01-research-r.html")
+pagedown::chrome_print("01-research-r.html", output = "01-research-r.pdf")
+pagedown::chrome_print("01-research-r.html", output = "01-research-r-nopause.pdf")
 ```
