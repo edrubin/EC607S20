@@ -63,13 +63,17 @@ The content of the lectures mainly follows *MHE* and [Michael Anderson](https://
 [.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/02-the-ideal/02-the-ideal.Rmd)
 <br>**Readings:** MHE chapter 2
 
-**Lecture 03: Why Regression?**
+**[Lecture 03: Why Regression?](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/03-why-regression/03-why-regression.html)**
 
 1. What's the big deal about least-squares (population) regression?
 2. What does the CEF tell us?
 3. How does least-squares regression relate to the CEF?
 
-**Readings:** MHE chapter 3
+**Note formats:** [.html](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/03-why-regression/03-why-regression.html) |
+[.pdf](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/03-why-regression/03-why-regression.pdf) |
+[.pdf (no pauses)](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/03-why-regression/03-why-regression-nopause.pdf) | 
+[.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/03-why-regression/03-why-regression.Rmd)
+<br>**Readings:** MHE chapter 3.1
 
 **Lecture 04: Inference and Simulation**
 
