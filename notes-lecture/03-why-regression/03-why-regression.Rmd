@@ -1010,7 +1010,7 @@ Linearity can be a strong assumption. When might we expect linearity?
 
 .hi-slate[Theorem] The best linear predictor theorem (3.1.5)
 
-The function $\text{X}_{i}' \beta$ the best linear predictor of $\text{Y}_{i}$ given $\text{X}_{i}$ (minimizes MSE).
+$\text{X}_{i}' \beta$ is the best *linear* predictor of $\text{Y}_{i}$ given $\text{X}_{i}$ (minimizes MSE).
 
 --
 
@@ -1038,8 +1038,8 @@ so $\text{X}_{i}'\beta$ is literally defined as the minimum MSE linear predictor
 1. Relax *linearity*
 2. Model selection
   - choosing $\text{X}_{i}$ is not always obvious
-  - overfitting is bad
-3. It's fancy/shiny and new
+  - overfitting is bad (bias-variance tradeoff)
+3. It's fancy, shiny, and new
 4. Some ML methods boil down to regression
 5. Others?
 
