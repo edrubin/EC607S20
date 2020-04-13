@@ -200,8 +200,11 @@ Building a research project/proposal.
 
 Step 1: **Research question (causal relationship of interest) and motivation.**
 
+- *Assignment:* Pitch a project—including the causal question of interest, the motivation, and (optional) how you could answer the question.
 - This project should be something you could turn into a legitimate research project.
 - Length: Between 2 sentences and 2 paragraphs (think *abstract*—read abstracts if necessary).
+
+**Due 15 April 2020 ([Canvas](https://canvas.uoregon.edu))** 
 
 Step 2: **Short project proposal**
 
