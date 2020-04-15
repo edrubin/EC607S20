@@ -75,22 +75,30 @@ The content of the lectures mainly follows *MHE* and [Michael Anderson](https://
 [.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/03-why-regression/03-why-regression.Rmd)
 <br>**Readings:** MHE chapter 3.1
 
-**Lecture 04: Inference and Simulation**
+**[Lecture 04: Inference and Simulation](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/04-inference/04-inference.html)***
 
 1. How do we move from populations to samples?
 2. What matters for drawing basic statistical inferences about the population?
 3. How can we learn about inference from simulation?
 4. How do we run (parallelized) simulations in R?
 
-**Readings:** MHE chapter 3
+**Note formats:** [.html](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/04-inference/04-inference.html) |
+[.pdf](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/04-inference/04-inference.pdf) |
+[.pdf (no pauses)](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/04-inference/04-inference-nopause.pdf) | 
+[.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/04-inference/04-inference.Rmd)
+<br>**Readings:** MHE chapter 3
 
-**Lecture 05: Regression Stuff**
+**[Lecture 05: Regression Stuff](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/03-why-regression/05-regression-stuff.html)***
 
 1. Saturated models
 1. When is regression causal?
 1. The conditional-independence assumption
 
-**Readings:** Still MHE chapter 3
+**Note formats:** [.html](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/05-regression-stuff/05-regression-stuff.html) |
+[.pdf](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/05-regression-stuff/05-regression-stuff.pdf) |
+[.pdf (no pauses)](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/05-regression-stuff/05-regression-stuff-nopause.pdf) | 
+[.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/05-regression-stuff/05-regression-stuff.Rmd)
+<br>**Readings:** Still MHE chapter 3
 
 **Lecture 06: Controls**
 
