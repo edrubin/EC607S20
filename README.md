@@ -152,45 +152,64 @@ The content of the lectures mainly follows *MHE* and [Michael Anderson](https://
 
 ## Lab slides
 
-**Lab 01: R Intro/Review**
+*Note:* From previous iteration of our class.
+
+**[Lab 01: R Intro/Review](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/01RBasics/01RBasics.html)**
 
 1. Object types/classes/structures
 1. Package management
 1. Math and stat. in R
 1. Indexing
 
-**Lab 02: Data in/and R**
+**Note formats:** [.html](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/01RBasics/01RBasics.html) | [.html (no pause)](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/01RBasics/01RBasics_NoPause.html) | [.pdf](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/01RBasics/01RBasics.pdf) | [.pdf (no pause)](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/01RBasics/01RBasics_NoPause.pdf) | [.Rmd](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/01RBasics/01RBasics.Rmd)
+<br>
+**Solutions:**
+[.html](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/01RBasics/01Solution.html) | [.pdf](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/01RBasics/01Solution.pdf)
+
+**[Lab 02: Data in/and R](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/02RData/02RData.html)**
 
 1. Data frames
 1. Data work with `dplyr`
 
-**Lab 03: RStudio + Data i/o with R**
+**Note formats:** [.html](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/02RData/02RData.html) | [.html (no pause)](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/02RData/02RData_NoPause.html) | [.pdf](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/02RData/02RData.pdf) | [.pdf (no pause)](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/02RData/02RData_NoPause.pdf) | [.Rmd](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/02RData/02RData.Rmd)
+
+**[Lab 03: RStudio + Data i/o with R](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/03RInput/03RInput.html)**
 
 1. RStudio
 1. Getting data into and out of R
 
-**Lab 04: Regression in R**
+**Note formats:** [.html](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/03RInput/03RInput.html) | [.html (no pause)](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/03RInput/03RInput_NoPause.html) | [.pdf](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/03RInput/03RInput.pdf) | [.pdf (no pause)](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/03RInput/03RInput_NoPause.pdf) | [.Rmd](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/03RInput/03RInput.Rmd)
+
+**[Lab 04: Regression in R](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/04RReg/04RReg.html)**
 
 1. `lm()` and `lm` objects
 1. `estimatr` and `lm_robust()`
 1. Other regressions, *e.g.*, `glm()`
 
-**Lab 05: Plotting/visualization in R**
+**Note formats:** [.html](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/04RReg/04RReg.html) | [.html (no pause)](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/04RReg/04RReg_NoPause.html) | [.pdf](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/04RReg/04RReg.pdf) | [.pdf (no pause)](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/04RReg/04RReg_NoPause.pdf) | [.Rmd](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/04RReg/04RReg.Rmd)
+
+**[Lab 05: Plotting in R](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/05RPlot/05RPlot.html)**
 
 1. Default `plot()` methods
 1. `ggplot2`
 
-**Lab 06: Simulation in R**
+**Note formats:** [.html](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/05RPlot/05RPlot.html) | [.html (no pause)](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/05RPlot/05RInput_NoPause.html) | [.pdf](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/05RPlot/05RPlot.pdf) | [.pdf (no pause)](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/05RPlot/05RPlot_NoPause.pdf) | [.Rmd](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/05RPlot/05RPlot.Rmd)
+
+**[Lab 06: Simulation in R](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/06RSim/06RSim.html)**
 
 1. General simulation strategies
 1. Simulating IV in finite samples
 
-**Lab 07: Miscellaneous R Tips and Tricks**
+**Note formats:** [.html](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/06RSim/06RSim.html) | [.html (no pause)](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/06RSim/06RSim_NoPause.html) | [.pdf](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/06RSim/06RSim.pdf) | [.pdf (no pause)](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/06RSim/06RSim_NoPause.pdf) | [.Rmd](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/06RSim/06RSim.Rmd)
+
+**[Lab 07: Miscellaneous R Tips and Tricks](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/07RMisc/07RMisc.html)**
 
 1. The `apply` family
 1. `for()` loops
 1. Lists
 1. Logical vectors and `which()`
+
+**Note formats:** [.html](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/07RMisc/07RMisc.html) | [.html (no pause)](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/07RMisc/07RMisc_NoPause.html) | [.pdf](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/07RMisc/07RMisc.pdf) | [.pdf (no pause)](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/07RMisc/07RMisc_NoPause.pdf) | [.Rmd](https://raw.githack.com/edrubin/EC525S19/master/NotesLab/07RMisc/07RMisc.Rmd)
 
 ## Problem sets
 
