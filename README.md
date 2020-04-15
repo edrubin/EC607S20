@@ -88,7 +88,7 @@ The content of the lectures mainly follows *MHE* and [Michael Anderson](https://
 [.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/04-inference/04-inference.Rmd)
 <br>**Readings:** MHE chapter 3
 
-**[Lecture 05: Regression Stuff](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/03-why-regression/05-regression-stuff.html)**
+**[Lecture 05: Regression Stuff](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/05-regression-stuff/05-regression-stuff.html)**
 
 1. Saturated models
 1. When is regression causal?
