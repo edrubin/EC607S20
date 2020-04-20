@@ -369,7 +369,7 @@ Let's compare false- and true-positive rates.super[.pink[†]] for
 1. Set seed.
 1. Run 10,000 iterations of
 <br>  a. Draw sample of size n from DGP.
-<br>  b. Conduction inference.
+<br>  b. Conduct inference.
 <br>  c. Record inferences' outcomes.
 ]
 ---

@@ -100,12 +100,16 @@ The content of the lectures mainly follows *MHE* and [Michael Anderson](https://
 [.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/05-regression-stuff/05-regression-stuff.Rmd)
 <br>**Readings:** Still MHE chapter 3
 
-**Lecture 06: Controls**
+**[Lecture 06: Controls](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/06-controls/06-controls.html)**
 
 1. Omitted-variable bias
 1. Good and bad controls
 
-**Readings:** Still MHE chapter 3
+**Note formats:** [.html](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/06-controls/06-controls.html) |
+[.pdf](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/06-controls/06-controls.pdf) |
+[.pdf (no pauses)](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/06-controls/06-controls-nopause.pdf) | 
+[.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/06-controls/06-controls.Rmd)
+<br>**Readings:** Still MHE chapter 3
 
 **Lecture 07: Matching**
 
