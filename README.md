@@ -219,7 +219,7 @@ The content of the lectures mainly follows *MHE* and [Michael Anderson](https://
 
 2–5 problem sets combining econometric theory and R.
 
-**Problem set 1**
+[**Problem set 1**](https://raw.githack.com/edrubin/EC607S20/master/problem-sets/001/001-problems.pdf)
 
 **Problem set 2**
 

@@ -4,6 +4,10 @@
 .Rproj.user
 .Rhistory
 .Ruserdata
+.Rapp.history
 
-ProblemSets/TODO
-ProblemSets/IDEAS
+problem-sets/001/001-problems.html
+problem-sets/001/001-problems.Rmd
+problem-sets/001/001-problems_cache
+problem-sets/001/001-problems_files
+problem-sets/001/001.Rproj

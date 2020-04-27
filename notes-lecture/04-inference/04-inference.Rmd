@@ -537,7 +537,7 @@ fun_iter <- function(iter, n = 30) {
 ---
 ## Run it
 
-Now we need to actually run our `iter_df()` function 10,000 times.
+Now we need to actually run our `fun_iter()` function 10,000 times.
 
 --
 
