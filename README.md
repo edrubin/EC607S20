@@ -111,7 +111,7 @@ The content of the lectures mainly follows *MHE* and [Michael Anderson](https://
 [.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/06-controls/06-controls.Rmd)
 <br>**Readings:** Still MHE chapter 3
 
-**[Lecture 07: Matching]((https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/07-matching/07-matching.html)**
+**[Lecture 07: Matching](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/07-matching/07-matching.html)**
 
 1. Matching estimators: Nearest neighbor and kernel
 1. Propensity-score methods: Regression control, treatment-effect heterogeneity, blocking, weighting, *doubly robust*
