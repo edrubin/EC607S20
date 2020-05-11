@@ -150,7 +150,7 @@ tidy_table <- function(x, terms, highlight_row = 1, highlight_color = "black", h
 }
 ```
 
-```{css, echo = F, eval = F}
+```{css, echo = F, eval = T}
 @media print {
   .has-continuation {
     display: block !important;
@@ -968,7 +968,7 @@ $$
 --
 
 which yields
-1. a .hi-slate[group-specific treatment effect] $\delta_1 + \delta_2 \text{X}_{i}$ for each $\text{X}_{i}$
+1. a .hi-slate[group-specific treatment effect] $\delta_1 + \delta_2 p(\text{X}_{i})$ for each $\text{X}_{i}$
 
 2. an .hi-slate[average treatment effect] $\delta_1 + \delta_2 \overline{p}(\text{X}_{i})$
 ---
@@ -1220,7 +1220,7 @@ $$
 
 Don't get (too) caught up in the bells and whistles.
 
-We still have two .hi-slate[major] requirements for any of these methods to work?
+We still have two .hi-slate[major] requirements for any of these methods to work.
 
 --
 

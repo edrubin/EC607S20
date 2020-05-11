@@ -1,0 +1,1423 @@
+---
+title: "Instrumental Variables"
+subtitle: "EC 607, Set 8"
+author: "Edward Rubin"
+date: "Spring 2020"
+output:
+  xaringan::moon_reader:
+    css: ['default', 'metropolis', 'metropolis-fonts', 'my-css.css']
+    # self_contained: true
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+class: inverse, middle
+
+```{r, setup, include = F}
+# devtools::install_github("dill/emoGG")
+library(pacman)
+p_load(
+  broom, tidyverse,
+  ggplot2, ggthemes, ggforce, ggridges,
+  latex2exp, viridis, extrafont, gridExtra,
+  kableExtra, snakecase, janitor,
+  data.table, dplyr,
+  lubridate, knitr,
+  estimatr, here, magrittr
+)
+# Define pink color
+red_pink = "#e64173"
+turquoise = "#20B2AA"
+orange = "#FFA500"
+red = "#fb6107"
+blue = "#3b3b9a"
+green = "#8bb174"
+grey_light = "grey70"
+grey_mid = "grey50"
+grey_dark = "grey20"
+purple = "#6A5ACD"
+slate = "#314f4f"
+# Dark slate grey: #314f4f
+# Knitr options
+opts_chunk$set(
+  comment = "#>",
+  fig.align = "center",
+  fig.height = 7,
+  fig.width = 10.5,
+  warning = F,
+  message = F
+)
+opts_chunk$set(dev = "svg")
+options(device = function(file, width, height) {
+  svg(tempfile(), width = width, height = height)
+})
+options(crayon.enabled = F)
+options(knitr.table.format = "html")
+# A blank theme for ggplot
+theme_empty = theme_bw() + theme(
+  line = element_blank(),
+  rect = element_blank(),
+  strip.text = element_blank(),
+  axis.text = element_blank(),
+  plot.title = element_blank(),
+  axis.title = element_blank(),
+  plot.margin = structure(c(0, 0, -0.5, -1), unit = "lines", valid.unit = 3L, class = "unit"),
+  legend.position = "none"
+)
+theme_simple = theme_bw() + theme(
+  line = element_blank(),
+  panel.grid = element_blank(),
+  rect = element_blank(),
+  strip.text = element_blank(),
+  axis.text.x = element_text(size = 18, family = "STIXGeneral"),
+  axis.text.y = element_blank(),
+  axis.ticks = element_blank(),
+  plot.title = element_blank(),
+  axis.title = element_blank(),
+  # plot.margin = structure(c(0, 0, -1, -1), unit = "lines", valid.unit = 3L, class = "unit"),
+  legend.position = "none"
+)
+theme_axes_math = theme_void() + theme(
+  text = element_text(family = "MathJax_Math"),
+  axis.title = element_text(size = 22),
+  axis.title.x = element_text(hjust = .95, margin = margin(0.15, 0, 0, 0, unit = "lines")),
+  axis.title.y = element_text(vjust = .95, margin = margin(0, 0.15, 0, 0, unit = "lines")),
+  axis.line = element_line(
+    color = "grey70",
+    size = 0.25,
+    arrow = arrow(angle = 30, length = unit(0.15, "inches")
+  )),
+  plot.margin = structure(c(1, 0, 1, 0), unit = "lines", valid.unit = 3L, class = "unit"),
+  legend.position = "none"
+)
+theme_axes_serif = theme_void() + theme(
+  text = element_text(family = "MathJax_Main"),
+  axis.title = element_text(size = 22),
+  axis.title.x = element_text(hjust = .95, margin = margin(0.15, 0, 0, 0, unit = "lines")),
+  axis.title.y = element_text(vjust = .95, margin = margin(0, 0.15, 0, 0, unit = "lines")),
+  axis.line = element_line(
+    color = "grey70",
+    size = 0.25,
+    arrow = arrow(angle = 30, length = unit(0.15, "inches")
+  )),
+  plot.margin = structure(c(1, 0, 1, 0), unit = "lines", valid.unit = 3L, class = "unit"),
+  legend.position = "none"
+)
+theme_axes = theme_void() + theme(
+  text = element_text(family = "Fira Sans Book"),
+  axis.title = element_text(size = 18),
+  axis.title.x = element_text(hjust = .95, margin = margin(0.15, 0, 0, 0, unit = "lines")),
+  axis.title.y = element_text(vjust = .95, margin = margin(0, 0.15, 0, 0, unit = "lines")),
+  axis.line = element_line(
+    color = grey_light,
+    size = 0.25,
+    arrow = arrow(angle = 30, length = unit(0.15, "inches")
+  )),
+  plot.margin = structure(c(1, 0, 1, 0), unit = "lines", valid.unit = 3L, class = "unit"),
+  legend.position = "none"
+)
+theme_set(theme_gray(base_size = 20))
+# Column names for regression results
+reg_columns = c("Term", "Est.", "S.E.", "t stat.", "p-Value")
+# Function for formatting p values
+format_pvi = function(pv) {
+  return(ifelse(
+    pv < 0.0001,
+    "<0.0001",
+    round(pv, 4) %>% format(scientific = F)
+  ))
+}
+format_pv = function(pvs) lapply(X = pvs, FUN = format_pvi) %>% unlist()
+# Tidy regression results table
+tidy_table = function(x, terms, highlight_row = 1, highlight_color = "black", highlight_bold = T, digits = c(NA, 3, 3, 2, 5), title = NULL) {
+  x %>%
+    tidy() %>%
+    select(1:5) %>%
+    mutate(
+      term = terms,
+      p.value = p.value %>% format_pv()
+    ) %>%
+    kable(
+      col.names = reg_columns,
+      escape = F,
+      digits = digits,
+      caption = title
+    ) %>%
+    kable_styling(font_size = 20) %>%
+    row_spec(1:nrow(tidy(x)), background = "white") %>%
+    row_spec(highlight_row, bold = highlight_bold, color = highlight_color)
+}
+```
+
+```{css, echo = F, eval = T}
+@media print {
+  .has-continuation {
+    display: block !important;
+  }
+}
+```
+
+$$
+\begin{align}
+  \def\ci{\perp\mkern-10mu\perp}
+\end{align}
+$$
+
+
+# Prologue
+
+---
+name: schedule
+
+# Schedule
+
+## Last time
+
+Matching and propensity-score methods
+- Conditional independence
+- Overlap
+
+## Today
+
+Instrumental variables (and two-stage least squares)
+
+## Upcoming
+
+Assignment 2
+
+---
+layout: true
+# Research designs
+
+---
+class: inverse, middle
+---
+name: designs
+## Selection on observables and/or unobservables
+
+We've been focusing on .hi-slate[*selection-on-observables* designs], _i.e._,
+$$
+\begin{align}
+  \left(\text{Y}_{0i},\, \text{Y}_{1i}\right) \ci \text{D}_{i}|\text{X}_{i}
+\end{align}
+$$
+for .hi-slate[observable] variables $\text{X}_{i}$.
+
+--
+
+.hi-pink[*Selection-on-unobservable* designs] replace this assumption with two new (but related) assumptions
+
+1. $\left(\text{Y}_{0i},\, \text{Y}_{1i}\right) \perp \text{Z}_{i}$
+
+2. $\mathop{\text{Cov}} \left( \text{Z}_{i},\, \text{D}_{i} \right) \neq 0$
+
+---
+## Selection on observables and/or unobservables
+
+Our main goal in causal-inference minded (applied) econometrics boils down to isolating .b["good" variation] in $\text{D}_{i}$ (exogenous/as-good-as-random) from .b["bad" variation] (the part of $\text{D}_{i}$ correlated with $\text{Y}_{0i}$ and $\text{Y}_{1i}$).
+
+--
+
+(We want to avoid selection bias.)
+
+--
+
+- .hi-slate[Selection-on-observables designs] assume that we can control for all *bad variation* (selection) in $\text{D}_{i}$ through a known (observed) $\text{X}_{i}$.
+
+--
+
+- .hi-pink[Selection-on-unobservables designs] assume that we can extract part of the *good variation* in $\text{D}_{i}$ (generally using some $\text{Z}_{i}$) and then use this *good* part of $\text{D}_{i}$ to estimate the effect of $\text{D}_{i}$ on $\text{Y}_{i}$.
+--
+ We throw away the *bad variation* in $\text{D}_{i}$ (it's bad).
+---
+## Which route?
+
+So set of research designs is more palatable?
+
+--
+
+1. There are plenty of bad applications of both sets.<br>.purple[Violated assumptions, bad controls, *etc.*]
+
+--
+
+1. .hi-slate[Selection on observables] assumes we know .it[everything] about selection into treatment—we can identify .it[all] of the good (or bad) variation in $\text{D}_{i}$.
+--
+<br>.purple[Tough in non-experimental settings. Difficult to validate in practice.]
+
+--
+
+1. .hi-pink[Selection on unobservables] assumes we can isolate .it[some] good/clean variation in $\text{D}_{i}$, which we then use to estimate the effect of $\text{D}_{i}$ on $\text{Y}_{i}$.
+--
+<br>.purple[Seems more plausible. Possible to validate. May be underpowered.]
+---
+layout: true
+# Instrumental variables
+
+---
+name: intro
+## Introduction
+
+.attn[Instrumental variables] (IV).super[.pink[†]] is the canonical selection-on-unobservables design—isolating *good variation* in $\text{D}_{i}$ via some magical .pink[instrument] $\color{#e64173}{\text{Z}_{i}}$.
+
+.footnote[.pink[†] For the moment, we're lumping together IV and two-stage least squares (2SLS) together—as many people do—even though they are technically different.]
+
+--
+
+Consider some model (structural equation)
+$$
+\begin{align}
+  \text{Y}_{i} = \beta_0 + \beta_1 \text{D}_{i} + \varepsilon_i \tag{1}
+\end{align}
+$$
+To guarantee consistent OLS estimates for $\beta_1$, want $\mathop{\text{Cov}} \left( \text{D}_{i},\,\varepsilon_i \right)=0$.
+<br> In general, this is a heroic assumption.
+
+--
+
+.note[Alternative:] Estimate $\beta_1$ via instrumental variables.
+
+---
+name: defined
+## Definition
+
+For our model
+$$
+\begin{align}
+  \text{Y}_{i} = \beta_0 + \beta_1 \text{D}_{i} + \varepsilon_i \tag{1}
+\end{align}
+$$
+
+A valid .attn[instrument] is a variable $\color{#e64173}{\text{Z}_{i}}$ such that
+
+1. $\mathop{\text{Cov}} \left( \color{#e64173}{\text{Z}_{i}},\, \text{D}_{i} \right) \neq 0$
+--
+<br>our .pink[instrument] correlates with treatment
+--
+ (so we can keep part of $\text{D}_{i}$)
+
+--
+
+2. $\mathop{\text{Cov}} \left( \color{#e64173}{\text{Z}_{i}},\, \varepsilon_i \right) = 0$
+--
+<br>our .pink[instrument] is uncorrelated with other (non- $\!\!\text{D}_{i}$) determinants of $\text{Y}_{i}$
+--
+, _i.e._, $\color{#e64173}{\text{Z}_{i}}$ is excludable from equation $(1)$.
+--
+ .attn[(exclusion restriction)]
+---
+name: example
+## Example
+
+Back to the returns to a college degree,
+$$
+\begin{align}
+  \text{Income}_i = \beta_0 + \beta_1 \text{Grad}_i + \varepsilon_i
+\end{align}
+$$
+OLS is likely biased.
+
+--
+
+What if that state conducts a (random) .hi-pink[lottery] for scholarships?
+
+--
+
+Let $\color{#e64173}{\text{Lottery}_i}$ denote an indicator for whether $i$ won a lottery scholarship..super[.pink[†]]
+
+.footnote[.pink[†] We'll have to focus on families who were eligible/who applied.]
+
+--
+
+1. $\mathop{\text{Cov}} \left( \color{#e64173}{\text{Lottery}_i},\, \text{Grad}_i \right)\neq 0$ $\left( >0 \right)$ if scholarships increase grad. rates.
+
+--
+
+2. $\mathop{\text{Cov}} \left(\color{#e64173}{\text{Lottery}_i},\, \varepsilon_i\right) = 0$ since the lottery is randomized.
+---
+layout: true
+# Instrument variables
+## The IV estimator
+
+The IV estimator for our model
+$$
+\begin{align}
+  \text{Y}_{i} = \beta_0 + \beta_1 \text{D}_{i} + \varepsilon_i \tag{1}
+\end{align}
+$$
+with (valid) instrument $\color{#e64173}{\text{Z}_{i}}$ is
+$$
+\begin{align}
+   \hat{\beta}_\text{IV} = \left(\text{Z}'\text{D}\right)^{-1} \left( \text{Z}'\text{Y}\right)
+\end{align}
+$$
+
+---
+name: iv-estimator
+
+--
+
+If you have no covariates, then
+$$
+\begin{align}
+  \hat{\beta}_\text{IV} = \dfrac{\mathop{\text{Cov}} \left( \color{#e64173}{\text{Z}_{i}},\, \text{Y}_{i}\right)}{\mathop{\text{Cov}} \left( \color{#e64173}{\text{Z}_{i}},\, \text{D}_{i} \right)}
+\end{align}
+$$
+---
+
+If you have additional (exogenous) covariates $\text{X}_i$, then
+$$
+\begin{align}
+  \text{Z} &= \begin{bmatrix}\color{#e64173}{\text{Z}_{i}} & \text{X}_{i}\end{bmatrix}
+  \\[0.5em]
+  \text{D} &= \begin{bmatrix}\color{#e64173}{\text{D}_{i}} & \text{X}_{i}\end{bmatrix}
+\end{align}
+$$
+---
+layout: true
+# Instrumental variables
+
+---
+## Proof: Consistency
+
+With a valid instrument $\text{Z}_{i}$, $\hat{\beta}_\text{IV}$ is a consistent estiamtor for $\beta_1$ in
+$$
+\begin{align}
+  \text{Y}_{i} = \beta_0 + \beta_1 \text{X}_{i} + \varepsilon_i \tag{1}
+\end{align}
+$$
+
+$\mathop{\text{plim}}\left( \hat{\beta}_{IV} \right)$
+
+--
+.pad-left[
+$= \mathop{\text{plim}}\left( \left(\text{Z}'\text{D}\right)^{-1} \left( \text{Z}'\text{Y}\right) \right)$
+]
+
+--
+.pad-left[
+$= \mathop{\text{plim}}\left( \left(\text{Z}'\text{D}\right)^{-1} \left( \text{Z}'\text{D} \beta + \text{Z}'\varepsilon\right) \right)$
+]
+
+--
+.pad-left[
+$= \mathop{\text{plim}}\left( \left(\text{Z}'\text{D}\right)^{-1} \left( \text{Z}'\text{D}\right) \beta\right) + \mathop{\text{plim}}\left(\dfrac{1}{N} \text{Z}'\text{D}\right)^{-1} \mathop{\text{plim}}\left( \dfrac{1}{N} \text{Z}'\varepsilon\right)$
+]
+
+--
+.pad-left[
+$=\beta$  .pink[✔]
+]
+---
+layout: true
+# Two-stage least squares
+
+---
+class: inverse, middle
+---
+name: setup
+## Setup
+
+You'll commonly see IV implemented as a two-stage process known as<br>.attn[two-stage least squares] (2SLS).
+
+--
+
+.attn[First stage] Estimate the effect of the instrument $\color{#e64173}{\text{Z}_{i}}$ on our endogenous variable $\text{D}_{i}$ and (predetermined) covariates $\text{X}_{i}$. Save $\color{#6A5ACD}{\widehat{\text{D}}_{i}}$.
+
+$$
+\begin{align}
+  \text{D}_{i} = \gamma_1 \color{#e64173}{\text{Z}_{i}} + \gamma_2 \text{X}_{i} + u_i
+\end{align}
+$$
+
+--
+
+.attn[Second stage] Estimate model we wanted—but only using the variation in $\text{D}_{i}$ that correlates with $\color{#e64173}{\text{Z}_{i}}$, _i.e._, $\color{#6A5ACD}{\widehat{\text{D}}_{i}}$.
+
+$$
+\begin{align}
+  \text{Y}_{i} = \beta_1 \color{#6A5ACD}{\widehat{\text{D}}_{i}} + \beta_2 \text{X}_{i} + \varepsilon_i
+\end{align}
+$$
+
+.note[Note] The controls $\text{X}_{i}$ must match in the first and second stages.
+
+---
+## IV estimation
+
+This two-step procedure, with a valid instrument, produces an estimator $\hat{\beta}_1$ that is consistent for $\beta_1$.
+
+$$
+\begin{align}
+  \hat{\beta}_\text{2SLS} &= \left( \text{D}' \text{P}_{\text{Z}} \text{D} \right)^{-1} \left( \text{D}' \text{P}_{\text{Z}} \text{Y} \right)
+  \\[0.3em]
+  \text{P}_{\text{Z}} &= \text{Z} \left( \text{Z}'\text{Z} \right)^{-1} \text{Z}'
+\end{align}
+$$
+
+where $\text{D}$ is a matrix of our treatment and predetermined covariates $\left( \text{X}_{i} \right)$ and $Z$ is a matrix of our instrument and our predetermined covariates.
+
+---
+## IV estimation
+
+Important notes
+
+- The controls $\left( \text{X}_{i} \right)$ must match in the first and second stages.
+
+- If you have exactly .hi-slate[one instrument] and exactly .hi-slate[one endogenous variable], then 2SLS and IV are identical.
+
+- Your second-stage standard errors are not correct.
+
+---
+name: reduced-form
+## The reduced form
+
+In addition to the regressions within the two stages of 2SLS
+1. $\text{D}_{i} = \gamma_1 \color{#e64173}{\text{Z}_{i}} + \gamma_2 \text{X}_{i} + u_i$
+2. $\text{Y}_{i} = \beta_1 \color{#6A5ACD}{\widehat{\text{D}}_{i}} + \beta_2 \text{X}_{i} + \varepsilon_i$
+
+there is a third important and related regression: the reduced form.
+
+--
+
+The .attn[reduced form] regresses the outcome $\text{Y}_{i}$ (LHS of the second stage) on our instrument $\color{#e64173}{\text{Z}_{i}}$ and covariates $\text{X}_{i}$ (RHS of the first stage).
+$$
+\begin{align}
+   \text{Y}_{i} = \pi_1 \color{#e64173}{\text{Z}_{i}} + \pi_2 \text{X}_{i} + u_i
+\end{align}
+$$
+--
+Thus, the reduced form provides a consistent estimate of the causal effect of our instrument on the outcome.
+---
+## The reduced form, continued
+
+While the reduced form estimates the causal effect of the instrument on our outcome, we're often actually interested in the effect of *treatment* $\left( \text{D}_{i} \right)$.
+
+--
+
+That said, the reduced form is still incredibly helpful/important:
+
+- Clarifies your source of identifying variation.
+--
+
+- Does not suffer from *weak instruments* problems.
+--
+
+- Only requires $\mathop{\text{Cov}} \left( \text{Z}_{i},\, \varepsilon_i \right) = 0$.
+--
+
+- Offers insights into your estimates
+--
+
+$$
+\begin{align}
+  \widehat{\beta}_{1}^\text{2SLS} = \dfrac{\widehat{\pi}_{1}}{\widehat{\gamma}_{1}}
+\end{align}
+$$
+when you have exactly one instrument.
+
+---
+name: reduced-intuition
+## The reduced form, intuition
+
+This expression for the 2SLS (and IV) estimator can be very helpful.
+$$
+\begin{align}
+  \widehat{\beta}_{1}^\text{2SLS} = \dfrac{\color{#6A5ACD}{\widehat{\pi}_{1}}}{\color{#20B2AA}{\widehat{\gamma}_{1}}} = \dfrac{\color{#6A5ACD}{\text{Reduced-form estimate}}}{\color{#20B2AA}{\text{First-stage estimate}}}
+\end{align}
+$$
+
+--
+
+What's the interpretation/intuition?
+
+--
+
+Back to our example: $\widehat{\beta}_1 =$ est. effect of college graduation on income.
+
+--
+
+$\color{#6A5ACD}{\widehat{\pi}_1}$ gives the estimated causal effect of the scholarship lottery on income
+--
+, but what share of lottery winners graduate? We need to rescale if $<$ 100%.
+
+--
+
+$\color{#20B2AA}{\widehat{\gamma}_1}$ estimates the effect of winning the scholarship lottery on graduation
+--
+—the share of winners who graduated due to winning.
+--
+ We can scale with $\color{#20B2AA}{\widehat{\gamma}_1}$!
+---
+name: reduced-example
+## The reduced form, example
+
+To see why this scaling makes sense, imagine that 50% of lottery winners graduate from college due to the lottery, _i.e._, $\color{#20B2AA}{\widehat{\gamma}_1 =}$ .turquoise[0.50]..super[.pink[†]]
+
+.footnote[.pink[†] Imagine none of the applicants would have graduated otherwise]
+
+--
+
+Our reduced-form estimate of $\color{#6A5ACD}{\widehat{\pi}_1=}$ .purple[$5,000] says that lottery winners make $5,000 more than the control group, on average.
+
+--
+
+However, half of the winners did not graduate, so $\color{#6A5ACD}{\widehat{\pi}_1}$ "underestimates" the effect of college graduation by combining graduates by nongraduates.
+
+--
+
+Thus, we want to double $\color{#6A5ACD}{\widehat{\pi}_1}$, _i.e._, divide by $\color{#20B2AA}{\widehat{\gamma}_1}$:
+$\color{#6A5ACD}{\widehat{\pi}_1}/\color{#20B2AA}{\widehat{\gamma}_1}$ = .turquoise[$5,000]/.purple[0.5] = $10,000.
+---
+name: reduced-derivation
+
+.qa[Q] How do we get this magical expression? $\left( \widehat{\beta}_1^\text{IV} = \dfrac{\widehat{\pi}_1}{\widehat{\gamma}_1} \right)$
+
+--
+
+## Derivation
+
+--
+
+$\widehat{\beta}_1^\text{IV} = \left( \text{Z}'\text{D} \right)^{-1} \left( \text{Z}'\text{Y} \right)$
+
+--
+
+$\color{#ffffff}{\widehat{\beta}_1^\text{IV}} = \left( \widetilde{\text{Z}}'\widetilde{\text{D}} \right)^{-1} \left( \widetilde{\text{Z}}'\text{Y} \right)$   applying FWL to reduce $\text{D}$ and $\text{Z}$ to vectors.
+
+--
+
+$\color{#ffffff}{\widehat{\beta}_1^\text{IV}} = \dfrac{\mathop{\text{Cov}} \left( \widetilde{\text{Z}}_{i},\, \text{Y}_{i} \right)}{\mathop{\text{Cov}} \left( \widetilde{\text{Z}}_i,\, \widetilde{\text{D}}_{i} \right)}$
+--
+ $= \dfrac{\mathop{\text{Cov}} \left( \widetilde{\text{Z}}_{i},\, \text{Y}_{i} \right)/\mathop{\text{Var}} \left( \widetilde{\text{Z}}_i \right)}{\mathop{\text{Cov}} \left( \widetilde{\text{Z}}_i,\, \widetilde{\text{D}}_{i} \right)/\mathop{\text{Var}} \left( \widetilde{\text{Z}}_i \right)}$
+
+--
+
+$\color{#ffffff}{\widehat{\beta}_1^\text{IV}} = \dfrac{\widehat{\pi}_1}{\widehat{\gamma}_1}$  .pink[✔]
+---
+layout: false
+class: clear, middle
+
+Let's push a bit deeper into IV's mechanics and intuition.
+---
+layout: true
+# IV: Mechanics and intuition
+
+---
+name: iv-intuition
+
+## Setup
+
+In this section, we'll use medical trials as a working example..super[.pink[†]]
+
+.footnote[.pink[†] Credit/thanks go to [Michael Anderson](https://are.berkeley.edu/~mlanderson/ARE_Website/Home.html) for this example—and much of these notes.]
+
+--
+
+We are interested in the regression model for the effect of some treatment (_e.g._, blood-pressure medication) on medical outcome $\text{Y}_{i}$
+--
+$$
+\begin{align}
+  \text{Y}_{i} = \beta_0 + \beta_1 \text{D}_{i} + \varepsilon_i
+\end{align}
+$$
+$\text{D}_{i}$ indicates whether $i$ *takes* the treatment (medication). $\varepsilon_i$ captures all other factors that affect $\text{Y}_{i}$.
+--
+ Or in potential-outcomes framework:
+
+$$
+\begin{align}
+  \text{Y}_{i} &= \text{Y}_{1i} \text{D}_{i} + \text{Y}_{0i} (1-\text{D}_{i}) \\
+  \text{Y}_{0i} &= \beta_0 + \varepsilon_i \\
+  \text{Y}_{1i} &= \text{Y}_{0i} + \beta_1
+\end{align}
+$$
+---
+## Research design
+
+.note[Goal] .hi-slate[Estimate the effect of blood-pressure medication] on blood pressure.
+
+--
+
+.note[Challenge] .hi-slate[Selection bias:] Even if treatment reduces blood pressure, selection bias will fights against the estimated effect.
+
+--
+
+.note[Solution] .hi-slate[Randomized medical trial:] Ask randomly chosen individuals in treatment group to take the pill. Control individual get placebo (or nothing).
+
+--
+
+.note[Analysis 1] .attn[Intention to treat] (.attn[ITT]): $\widehat{\beta}_1^\text{ITT} = \overline{\text{Y}}_\text{Trt} - \overline{\text{Y}}_\text{Ctrl}$
+
+--
+
+.note[ITT problem] .attn[Bias from noncompliance:] People don't always follow rules.
+<br>*E.g.*, treated folks who don't take pills; control folks who take pills.
+
+--
+
+.note[Analysis 2] .hi-slate[IV!]
+--
+ Instrument medication $\text{D}_{i}$ with intention to treat $\text{Z}_{i}$.
+---
+## The IV solution
+
+First question: Is $\text{Z}_{i}$ a valid instrument for $\text{D}_{i}$?
+
+--
+
+1. $\mathop{\text{Cov}} \left( \text{Z}_{i},\, \varepsilon_i \right) = 0$ as $\text{Z}_{i}$ was randomly assigned (exclusion restriction).
+
+--
+
+1. $\mathop{\text{Cov}} \left( \text{Z}_{i},\, \text{D}_{i} \right)\neq 0$ if assignment to treatment changes the likelihood you take the pills (first stage).
+
+--
+
+∴ $\text{Z}_{i}$ is a valid instrument for $\text{D}_{i}$ and IV consistently estimates $\beta_1$.
+---
+name: iv-noncompliance
+## Noncompliance
+
+.attn[Noncompliant] individuals do not abide by their treatment assignment.
+
+--
+
+Let's see how IV "solves" this problems.
+
+--
+
+First, assume noncompliance only affects treated individuals—*i.e.*, treated folks sometimes don't take their pills; control folks never take pills.
+
+---
+## Noncompliance, continued
+
+The .hi-slate[first stage] recovers the share of treatment individuals who take the pill
+$$
+\begin{align}
+  \text{D}_{i} = \gamma_1 \text{Z}_{i} + u_i
+\end{align}
+$$
+--
+*i.e.*, if 50% of treated individuals take the medication, $\widehat{\gamma} =$ 0.50.
+
+--
+
+The .hi-slate[reduced form] estimates the *ITT*
+$$
+\begin{align}
+  \text{Y}_{i} = \pi_1 \text{Z}_{i} + v_i
+\end{align}
+$$
+--
+which we know IV rescales using the first stage
+$$
+\begin{align}
+  \widehat{\beta}_{1}^\text{IV} = \dfrac{\widehat{\pi}_1}{\widehat{\gamma}_1} = \dfrac{\widehat{\pi}_1}{0.50} =
+  2 \times \widehat{\pi}_1
+\end{align}
+$$
+---
+name: iv-rescale
+## Noncompliance, continued
+
+IV solves the noncompliance issue by rescaling by the rate of compliance.
+
+--
+
+If everyone perfectly complies, then $\widehat{\gamma}_1 = 1$ and $\widehat{\beta}_{1}^\text{IV} = \widehat{\pi}_1/1 = \widehat{\beta}_{1}^\text{ITT}$.
+
+--
+
+.ex[Further example] $N_\text{Trt}$ = 10; trt. compliance = 50%; ctrl. compliance = 100%.
+
+$\overline{\text{Y}}_\text{Trt} = \dfrac{5 (\beta_0 + \beta_1) + 5 (\beta_0)}{10} = \beta_0 + \dfrac{\beta_1}{2}$
+--
+ and $\overline{\text{Y}}_\text{Ctrl} = \beta_0$.
+
+--
+
+So our reduced-form estimate (the ITT) is $\widehat{\gamma}_1 = \dfrac{\beta_1}{2}$ (half the true effect).
+
+--
+
+IV consistently estimates $\beta_1$ via rescaling the ITT by the rate of compliance
+$$
+\begin{align}
+  \widehat{\beta}_1^\text{IV} = \dfrac{\pi}{\gamma} = \dfrac{\beta_1/2}{1/2} = \beta_1
+\end{align}
+$$
+---
+## Takeaways
+
+Main points
+
+1. IV .b[rescales] .pink[the causal effect of] $\color{#e64173}{\text{Z}_{i}}$ .pink[on] $\color{#e64173}{\text{Y}_{i}}$ by .purple[the causal effect of] $\color{#6A5ACD}{\text{Z}_{i}}$ .purple[on] $\color{#6A5ACD}{\text{D}_{i}}$.
+
+--
+
+1. IV .b[does not] compare treated compliers to untreated compliers.
+--
+<br>Such a comparison/estimator would re-introduce selection bias.
+---
+layout: true
+class: clear, middle
+
+---
+name: het
+
+Thus far, we assumed homogeneous treatment effects.
+
+.qa[Q] What happens .b[when treatment effects are heterogeneous]?
+---
+
+.qa[A] Let's recall what our instruments are doing (with Venn diagrams!).
+
+.note[Credit] [Glen Waddell](http://www.glenwaddell.com) introduced me to IV via Venn.
+
+---
+name: venn
+
+```{r, venn_iv, echo = F, fig.height = 7.5}
+# Colors (order: x1, x2, x3, y, z)
+venn_colors = c(purple, red, "grey60", orange, red_pink)
+# Line types (order: x1, x2, x3, y, z)
+venn_lines = c("solid", "dotted", "dotted", "solid", "solid")
+# Locations of circles
+venn_df = tibble(
+  x  = c( 0.0,   -0.5,    1.5,   -1.0, -1.4),
+  y  = c( 0.0,   -2.5,   -1.8,    2.0, -2.6),
+  r  = c( 1.9,    1.5,    1.5,    1.3,  1.3),
+  l  = c( "Y", "X[1]", "X[2]", "X[3]",  "Z"),
+  xl = c( 0.0,    0.7,    1.6,   -1.0, -2.9),
+  yl = c( 0.0,   -3.8,   -1.9,    2.2, -2.6)
+)
+# Venn
+ggplot(data = venn_df, aes(x0 = x, y0 = y, r = r, fill = l, color = l)) +
+geom_circle(aes(linetype = l), alpha = 0.3, size = 0.75) +
+theme_void() +
+theme(legend.position = "none") +
+scale_fill_manual(values = venn_colors) +
+scale_color_manual(values = venn_colors) +
+scale_linetype_manual(values = venn_lines) +
+geom_text(aes(x = xl, y = yl, label = l), size = 9, family = "Fira Sans Book", parse = T) +
+annotate(
+  x = -5.5, y = 3.3,
+  geom = "text", label = "Figure 1", size = 10, family = "Fira Sans Book", hjust = 0
+) +
+xlim(-5.5, 4.5) +
+ylim(-4.2, 3.4) +
+coord_equal()
+```
+---
+```{r, venn-endog, echo = F, fig.height = 7.5}
+# Change locations of circles
+venn_df %>%
+mutate(
+  x = x +   c(0, 0, 0, 0, 0),
+  xl = xl + c(0, 0, 0, 0, 0),
+  y = y +   c(0, 0, 0, 0, 1),
+  yl = yl + c(0, 0, 0, 0, 1)
+) %>%
+# Venn
+ggplot(data = ., aes(x0 = x, y0 = y, r = r, fill = l, color = l)) +
+geom_circle(aes(linetype = l), alpha = 0.3, size = 0.75) +
+theme_void() +
+theme(legend.position = "none") +
+scale_fill_manual(values = venn_colors) +
+scale_color_manual(values = venn_colors) +
+scale_linetype_manual(values = venn_lines) +
+geom_text(aes(x = xl, y = yl, label = l), size = 9, family = "Fira Sans Book", parse = T) +
+annotate(
+  x = -5.5, y = 3.3,
+  geom = "text", label = "Figure 2", size = 10, family = "Fira Sans Book", hjust = 0
+) +
+xlim(-5.5, 4.5) +
+ylim(-4.2, 3.4) +
+coord_equal()
+```
+---
+```{r, venn-irrelevant, echo = F, fig.height = 7.5}
+# Change locations of circles
+venn_df %>%
+mutate(
+  x = x +   c(0, 0, 0, 0,-1),
+  xl = xl + c(0, 0, 0, 0,-1),
+  y = y +   c(0, 0, 0, 0, 2.3),
+  yl = yl + c(0, 0, 0, 0, 2.3)
+) %>%
+# Venn
+ggplot(data = ., aes(x0 = x, y0 = y, r = r, fill = l, color = l)) +
+geom_circle(aes(linetype = l), alpha = 0.3, size = 0.75) +
+theme_void() +
+theme(legend.position = "none") +
+scale_fill_manual(values = venn_colors) +
+scale_color_manual(values = venn_colors) +
+scale_linetype_manual(values = venn_lines) +
+geom_text(aes(x = xl, y = yl, label = l), size = 9, family = "Fira Sans Book", parse = T) +
+annotate(
+  x = -5.5, y = 3.3,
+  geom = "text", label = "Figure 3", size = 10, family = "Fira Sans Book", hjust = 0
+) +
+xlim(-5.5, 4.5) +
+ylim(-4.2, 3.4) +
+coord_equal()
+```
+---
+```{r, venn-iv-endog2, echo = F, fig.height = 7.5}
+# Change locations of circles
+venn_df %>%
+mutate(
+  x = x +   c(0,    0,   0, 0,    2),
+  xl = xl + c(0, -2.4, 0.8, 0,  4.6),
+  y = y +   c(0,    0,   0, 0,    0),
+  yl = yl + c(0,    0,   0, 0, -1.1)
+) %>%
+# Venn
+ggplot(data = ., aes(x0 = x, y0 = y, r = r, fill = l, color = l)) +
+geom_circle(aes(linetype = l), alpha = 0.3, size = 0.75) +
+theme_void() +
+theme(legend.position = "none") +
+scale_fill_manual(values = venn_colors) +
+scale_color_manual(values = venn_colors) +
+scale_linetype_manual(values = venn_lines) +
+geom_text(aes(x = xl, y = yl, label = l), size = 9, family = "Fira Sans Book", parse = T) +
+annotate(
+  x = -5.5, y = 3.3,
+  geom = "text", label = "Figure 4", size = 10, family = "Fira Sans Book", hjust = 0
+) +
+xlim(-5.5, 4.5) +
+ylim(-4.2, 3.4) +
+coord_equal()
+```
+---
+```{r, venn-iv-endog1, echo = F, fig.height = 7.5}
+# Venn
+ggplot(data = venn_df, aes(x0 = x, y0 = y, r = r, fill = l, color = l)) +
+geom_circle(aes(linetype = l), alpha = 0.3, size = 0.75) +
+theme_void() +
+theme(legend.position = "none") +
+scale_fill_manual(values = venn_colors) +
+scale_color_manual(values = venn_colors) +
+scale_linetype_manual(values = venn_lines) +
+geom_text(aes(x = xl, y = yl, label = l), size = 9, family = "Fira Sans Book", parse = T) +
+annotate(
+  x = -5.5, y = 3.3,
+  geom = "text", label = "Figure 1", size = 10, family = "Fira Sans Book", hjust = 0
+) +
+xlim(-5.5, 4.5) +
+ylim(-4.2, 3.4) +
+coord_equal()
+```
+
+---
+layout: true
+# IV + heterogeneity
+
+---
+## Recap
+
+Throughout the course, we've discussed two concepts of treatment effects.
+
+--
+
+1. .attn[Average treatment effect] (.attn[ATE]) The average treatment effect for an individual randomly drawn from our sample.
+
+--
+
+1. .attn[Treatment on the treated] (.attn[TOT]) The average treatment effect for a .it.hi-slate[treated] individual
+randomly drawn from our sample.
+
+--
+
+When we assume homogeneous/constant treatment effects, ATE = TOT.
+
+--
+
+.qa[Q] If treatment effects vary, then what do IV and 2SLS estimate?
+
+--
+
+.qa[A] Not ATE.
+--
+ And not TOT.
+--
+ They estimate the LATE..super[.pink[†]]
+
+ .footnote[
+ .pink[†] See [Angrist, Imbens, and Rubin (1996)](https://www.jstor.org/stable/2291629).
+ ]
+---
+## The LATE
+
+IV generally estimates the .attn[LATE]—the .attn[Local Average Treatment Effect].
+
+--
+
+.note[Recall] IV "works" by isolating variation in $\text{D}_{i}$ induced by our instrument $\text{Z}_{i}$.
+
+--
+
+In other words: IV focuses on the individuals whose $\text{D}_{i}$ changes due to $\text{Z}_{i}$.
+
+Angrist, Imbens, and Rubin (1996) call these folks .attn[compliers].
+
+--
+
+However, *compliers* are only one of four possible groups.
+
+.col-left[
+1. .attn[Compliers] $\text{D}_{i} = 1$ iff $\text{Z}_{i}=1$.
+1. .attn[Always-takers] $\text{D}_{i} = 1$ $\forall \text{Z}_{i}$.
+1. .attn[Never-takers] $\text{D}_{i} = 0$ $\forall \text{Z}_{i}$.
+1. .attn[Defiers] $\text{D}_{i} = 1$ iff $\text{Z}_{i}=0$.
+]
+--
+.col-right[
+Only take pills .hi-slate[when treated].
+<br>.hi-slate[Always] take pills.
+<br>.hi-slate[Never] take pills.
+<br>Only take pills .hi-slate[when untreated].
+]
+---
+## The LATE
+
+Because IV only uses variation in $\text{D}_{i}$ that correlates with $\text{Z}_{i}$, IV mechanically drops *always-takers* and *never-takers*.
+
+--
+
+Most IV derivations/applications assume away the existence of *defiers*.
+
+--
+
+Thus, IV estimates a treatment effect .hi-slate[using only *compliers*].
+
+--
+
+Hence the "local" in *local average treatment effect*.
+---
+name: late-ex
+## The LATE: Medical-trial example
+
+Imagine treatment works for some $\left( \beta_{1,i} < 0 \right)$ and not for others $\left( \beta_{1,j} = 0 \right)$.
+
+Suppose individuals know their response to blood-pressure medication.
+
+--
+- $\beta_{1,i}<0$ individuals always take the pill.
+
+--
+- $\beta_{1,j}=0$ individuals only take the pill when treated.
+
+--
+
+Then our compliers will be individuals for whom $\beta_{1,j}=0$.
+
+--
+
+Thus, IV's LATE will indicate no treatment effect $\left( \widehat{\beta}_1^\text{IV} = 0 \right)$.
+
+---
+## The LATE
+
+.qa[Q] So is IV actually inconsistent?
+
+--
+
+.qa[A] It depends what you are trying to estimate (and how you interpret it).
+
+IV doesn't estimate the ATE or TOT, so it would be inconsistent for them..super[.pink[†]]
+
+.footnote[
+.pink[†] Just as the TOT is not consistent for the ATE.
+]
+
+--
+
+IV estimates the *local* average treatment effect.
+
+--
+
+.note[Takeaway] Because IV identifies off of compliers, it estimates an average treatment effect for these individuals (who *comply* with the instrument).
+
+--
+
+.note[Takeaway.sub[2]] Different instruments have different LATEs.
+---
+name: monotonicity
+## Monotonicity
+
+We've already written down the two classical IV/2SLS assumptions
+
+- .note[First stage:] $\mathop{\text{Cov}} \left( \text{Z}_{i},\, \text{D}_{i} \right) > 0$
+- .note[Exclusion restriction:] $\mathop{\text{Cov}} \left( \text{Z}_{i},\, \varepsilon_{i} \right) = 0$
+
+but we need a third assumption to get ensure IV's complier-based LATE interpretation.
+
+--
+
+- .attn[Monotonicity] (.attn[Uniformity]).attn[:] $\text{D}_{i}(z)\geq \text{D}_{i}(z')$ or $\text{D}_{i}(z)\leq \text{D}_{i}(z') \enspace \forall i$
+<br> [Heckman](chrome-extension://oemmndcbldboiebfnladdacbdfmadadm/http://jenni.uchicago.edu/papers/koop2006/koop2-IV_ho_2006-09-25a_mms.pdf): *Uniformity* of responses *across persons.*
+<br> [Imbens and Angrist (1994)](https://www.jstor.org/stable/2951620): Instrument has monotone effect on $\text{D}_{i}$.
+---
+## Monotonicity
+
+If "defiers" exist, then monotonicity/uniformity is violated.
+
+--
+
+In this case, the IV estimand is
+
+$$
+\begin{align}
+  \dfrac{\tau_{c} \mathop{\text{Pr}}\left(\text{complier}\right) - \tau_{d} \mathop{\text{Pr}}\left(\text{defier}\right)}{ \mathop{\text{Pr}}\left(\text{complier}\right) -  \mathop{\text{Pr}}\left(\text{defier}\right)}
+\end{align}
+$$
+
+which is not bound between $\tau_{c}$ and $\tau_{d}$.
+
+--
+
+.ex[Example] $\tau_c=$ 1 and $\tau_d=$ 2. $\mathop{\text{Pr}}\left(\text{complier}\right)=$ 2/3 and $\mathop{\text{Pr}}\left(\text{defier}\right)=$ 1/3.
+
+--
+
+Then the "LATE" is 0..super[.pink[†]]
+
+.footnote[
+.pink[†] Some people would instead say that there is no LATE when you violate monotonicity.
+]
+
+---
+layout: false
+class: clear, middle
+
+Until now, we've focused on using a single instrument.
+
+The 2SLS estimator accomodates multiple instruments..super[.pink[†]]
+
+.footnote[
+.pink[†] Whether you can find multiple valid instruments is another question.
+]
+---
+layout: true
+# Multiple instruments
+
+---
+class: inverse, middle
+name: multi-inst
+---
+## Motivation
+
+.qa[Q] Why include multiple instruments?
+
+--
+
+.qa[A] Multiple instruments can capture more variation in $\text{D}_{i}$ (efficiency).
+
+--
+
+Using terminology from the *system-of-equations* literature,
+
+- one instrument for one endogenous variable: .attn[just identified]
+- multiple instruments for one endogenous variable: .attn[over identified]
+
+---
+## In practice
+
+With (valid) instruments $\text{Z}_{1i}$ and $\text{Z}_{2i}$, or first stage becomes
+$$
+\begin{align}
+  \text{D}_{i} = \gamma_0 + \gamma_1 \text{Z}_{1i} + \gamma_2 \text{Z}_{2i} + \gamma_3 \text{X}_{i} + u_i
+\end{align}
+$$
+
+--
+
+while our second stage is still
+$$
+\begin{align}
+  \text{Y}_{i} = \beta_0 + \beta_1 \widehat{\text{D}}_{i} + \beta_2 \text{X}_{i} + v_i
+\end{align}
+$$
+---
+layout: true
+# Multiple instruments
+## Example: Quarter of birth
+
+---
+name: multi-ex
+
+Back to our quest to estimate the returns to education.
+
+--
+
+[Angrist and Krueger (1991)](https://www.jstor.org/stable/2937954) proposed *quarter of birth* as a set of instruments for years of schooling.
+
+--
+
+Accordingly, their first stage looks something like.super[.pink[†]]
+
+.footnote[
+.pink[†] We need to drop one of the quarter-of-birth indicators to avoid perfect collinearity.
+]
+
+$$
+\begin{align}
+  \text{Schooling}_i = \gamma_0 &+ \gamma_1 \mathbb{I}(\text{Born Q1})_{i} + \gamma_2 \mathbb{I}(\text{Born Q2})_{i}
+  \\&+ \gamma_3 \mathbb{I}(\text{Born Q3})_{i} + \gamma_4 \mathbb{I}(\text{Born Q4})_{i}
+  \\&+ \gamma_5 \text{X}_{i} + u_{i}
+\end{align}
+$$
+
+
+---
+.qa[Q] Is quarter of birth a valid instrument?
+
+--
+
+.qa[Q1] Why would quarter of birth affect schooling? (.note[First stage])
+
+--
+
+.qa[A1] Students cannot drop out of school until a certain age, and quarter of birth affects your age at the time you begin school.
+
+--
+
+.ex[Example] Some states require students to stay in school until they are 16.
+- Students who start school at age .hi-slate[6] drop out after .hi-slate[10] years of schooling.
+- Students who start school at age .hi-slate[5] drop out after .hi-slate[11] years of schooling.
+
+---
+If students must begin school in calendar year in which they turn 6
+- December birthdates: begin school at 5.75; drop out with 10.25 yrs.
+- January birthdates: begin school at 6.75; drop out with 9.25 yrs.
+
+--
+
+For some group, quarter of birth may affect the number of years in school.
+---
+
+It turns out that the first stage is also pretty weak in this setting.
+
+.attn[Weak instruments] can cause several problems for 2SLS/IV:
+
+--
+
+1. Our estimator is a ratio of the reduced form and the first stage, so a weak first stage can blow up reduced-form estimates (amplifying reduced-form noise/bias).
+
+--
+
+2. Many weak instruments lead to a finite-sample issue in which 2SLS is biased toward OLS—our first stage is essentially overfitting.
+
+--
+
+What about our other requirements for a valid instrument?
+
+---
+.qa[Q2] Is quarter of birth uncorrelated with $\varepsilon_i$ (.note[excludable])?
+
+--
+
+.qa[A2] While quarter of birth may be fairly arbitrary for some families, other families might time births.
+
+If these birth timers differ from other couples along other dimensions (_e.g._, income or education), then quarter of birth may correlate with $\varepsilon_i$.
+---
+.qa[Q3] Is the effect monotone?
+
+--
+
+.qa[A3] Some.super[.pink[†]] argue that monotonicity may be violated in this setting.
+
+.footnote[
+.pink[†] _E.g._, [Aliprantis (2012)](https://journals.sagepub.com/doi/abs/10.3102/1076998610396885)
+]
+
+--
+
+Consider December births.
+
+--
+
+- Original idea: December birthdates will start school at age 5.7, inducing more years of education before 16.
+
+--
+
+- *Redshirting* idea: Parents hold back December kids so they can be older (_i.e._, 6.7), inducing fewer years of education before 16.
+
+---
+layout: true
+# 2SLS and .mono[R]
+
+---
+name: 2sls-r
+
+## `estimatr`
+
+You can implement 2SLS/IV in many ways in .mono[R].
+
+Today: `esitmatr` and `iv_robust()`.
+
+--
+
+Specifically, we give `iv_robust()` the relationship that we want separted from the instrument by `|`
+
+--
+, *e.g.*,
+
+```{r, iv-data, include = F}
+# Set seed
+set.seed(12345)
+# Sample size
+n = 1e2
+# Define our variance-covariance matrix (D, ε, Z)
+Σ = matrix(data = c(1, 0.3, 0.3, 0.3, 1, 0, 0.3, 0, 1), ncol = 3)
+# Our vector of means (D, ε, Z)
+μ = c(10, 0, 3)
+# Draw n observations; convert to tibble
+sample_df = MASS::mvrnorm(n = n, mu = μ, Sigma = Σ) %>% as_tibble()
+# Name variables
+names(sample_df) = c("D", "ε", "Z")
+# Calculate Y
+sample_df %<>% mutate(Y = 7 + 1 * D + ε)
+```
+
+```{r, r-iv1}
+# Estimate 2SLS
+iv_robust(Y ~ D | Z, data = sample_df, se_type = "classical") %>%
+  tidy() %>% select(1:5)
+```
+---
+
+## Now in two stages!
+
+Of course, we can estimate 2SLS in two stages.
+
+```{r, r-iv-s1}
+# First stage
+stage1 = lm_robust(D ~ Z, data = sample_df, se_type = "classical")
+# First-stage results
+stage1 %>% tidy() %>% select(1:5)
+```
+---
+
+## Second stage
+
+We just need to add $\widehat{\text{D}}_{i}$ to our dataset.
+
+```{r, r-iv-s2}
+# Add fitted (first-stage) values to data
+sample_df %<>% mutate(D_hat = stage1$fitted.values)
+# Second stage
+stage2 = lm_robust(Y ~ D_hat, data = sample_df, se_type = "classical")
+# Second-stage results
+stage2 %>% tidy() %>% select(1:5)
+```
+---
+## Standard errors
+
+However, recall that our second-stage standard errors are not correct.
+
+--
+
+.center.hi-purple[Second-stage results]
+<span style="display:block; margin-bottom:-1em;"> </span>
+
+```{r, r-iv-2sls1, echo = F}
+stage2 %>%
+  tidy_table(
+    terms = c("Int", "D hat"),
+    highlight_bold = F
+  )
+```
+
+--
+
+.center.hi-pink[2SLS results]
+<span style="display:block; margin-bottom:-1em;"> </span>
+```{r, r-iv-2sls2, echo = F}
+iv_robust(Y ~ D | Z, data = sample_df, se_type = "classical") %>%
+  tidy_table(
+    terms = c("Int", "D"),
+    highlight_bold = F
+  )
+```
+
+
+
+
+
+
+---
+layout: true
+# IV and 2SLS
+## Conclusions
+
+---
+name: conclusions
+
+1. IV/2SLS focus on .hi-slate[isolating some "good" variation] in $\text{D}_{i}$ via $\text{Z}_{i}$.
+
+1. Important .hi-slate[requirements]: strong first stage, excludability, monotonicity.
+
+1. IV and 2SLS .hi-slate[rescale the reduced form] with the first stage.
+
+1. Estimates are .hi-slate[LATE from compliers].
+
+1. Different instruments can produce .hi-slate[different LATEs].
+
+1. A .hi-slate[weak first stage] can lead to problems.
+---
+layout: false
+# Table of contents
+
+.col-left[
+### Admin
+.smallest[
+
+1. [Schedule](#schedule)
+]
+
+### Instrumental variables
+.smallest[
+1. [Research designs](#designs)
+1. [Introduction](#intro)
+1. [Definition](#defined)
+1. [Example](#example)
+1. [IV estimator](#iv-estimator)
+]
+
+]
+
+.col-right[
+
+### Two-stage least squares
+.smallest[
+1. [Setup](#setup)
+1. [The reduced form](#reduced-form)
+  - [Defined](#reduced-form)
+  - [Intuition](#reduced-intuition)
+  - [Example](#reduced-example)
+  - [Derivation](#reduced-derivation)
+1. [Intuition and mechanics](#iv-intuition)
+  - [Noncompliance](#iv-noncompliance)
+  - [Rescaling](#iv-rescale)
+1. [Heterogeneous treatment effects](#het)
+  - [Venn diagram](#venn)
+  - [LATE](#late)
+  - [Example](#late-ex)
+  - [Monotonicity](#monotonicity)
+1. [Multiple instruments](#multi-inst)
+  - [Example](#multi-ex)
+1. [2SLS and .mono[R]](#2sls-r)
+1. [Conclusions](#conclusions)
+]
+
+]
+---
+exclude: true
+
+```{r, generate pdfs, include = F, eval = F}
+pagedown::chrome_print("08-iv.html", output = "08-iv.pdf")
+pagedown::chrome_print("08-iv.html", output = "08-iv-nopause.pdf")
+```
