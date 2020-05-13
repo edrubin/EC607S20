@@ -108,7 +108,7 @@ Our main goal in causal-inference minded (applied) econometrics boils down to is
 ---
 ## Which route?
 
-So set of research designs is more palatable?
+Which set of research designs is more palatable?
 
 --
 
@@ -255,7 +255,7 @@ layout: true
 ---
 ## Proof: Consistency
 
-With a valid instrument `\(\text{Z}_{i}\)`, `\(\hat{\beta}_\text{IV}\)` is a consistent estiamtor for `\(\beta_1\)` in
+With a valid instrument `\(\text{Z}_{i}\)`, `\(\hat{\beta}_\text{IV}\)` is a consistent estimator for `\(\beta_1\)` in
 $$
 `\begin{align}
   \text{Y}_{i} = \beta_0 + \beta_1 \text{X}_{i} + \varepsilon_i \tag{1}
@@ -307,7 +307,7 @@ $$
 
 --
 
-.attn[Second stage] Estimate model we wanted—but only using the variation in `\(\text{D}_{i}\)` that correlates with `\(\color{#e64173}{\text{Z}_{i}}\)`, _i.e._, `\(\color{#6A5ACD}{\widehat{\text{D}}_{i}}\)`.
+.attn[Second stage] Estimate the model we wanted—but only using the variation in `\(\text{D}_{i}\)` that correlates with `\(\color{#e64173}{\text{Z}_{i}}\)`, _i.e._, `\(\color{#6A5ACD}{\widehat{\text{D}}_{i}}\)`.
 
 $$
 `\begin{align}
@@ -338,6 +338,8 @@ where `\(\text{D}\)` is a matrix of our treatment and predetermined covariates `
 Important notes
 
 - The controls `\(\left( \text{X}_{i} \right)\)` must match in the first and second stages.
+
+- *Related:* Nonlinear first stages can mess things up.
 
 - If you have exactly .hi-slate[one instrument] and exactly .hi-slate[one endogenous variable], then 2SLS and IV are identical.
 
@@ -518,7 +520,7 @@ $$
 
 --
 
-.note[Solution] .hi-slate[Randomized medical trial:] Ask randomly chosen individuals in treatment group to take the pill. Control individual get placebo (or nothing).
+.note[Solution] .hi-slate[Randomized medical trial:] Ask randomly chosen individuals in treatment group to take the pill. Controls get placebo (or nothing).
 
 --
 
@@ -574,7 +576,7 @@ $$
 \end{align}`
 $$
 --
-*i.e.*, if 50% of treated individuals take the medication, `\(\widehat{\gamma} =\)` 0.50.
+*i.e.*, if 50% of treated individuals take the medication, `\(\widehat{\gamma}_1 =\)` 0.50.
 
 --
 
@@ -701,6 +703,7 @@ When we assume homogeneous/constant treatment effects, ATE = TOT.
  .pink[†] See [Angrist, Imbens, and Rubin (1996)](https://www.jstor.org/stable/2291629).
  ]
 ---
+name: late
 ## The LATE
 
 IV generally estimates the .attn[LATE]—the .attn[Local Average Treatment Effect].

@@ -950,6 +950,7 @@ When we assume homogeneous/constant treatment effects, ATE = TOT.
  .pink[†] See [Angrist, Imbens, and Rubin (1996)](https://www.jstor.org/stable/2291629).
  ]
 ---
+name: late
 ## The LATE
 
 IV generally estimates the .attn[LATE]—the .attn[Local Average Treatment Effect].

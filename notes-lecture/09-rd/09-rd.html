@@ -123,7 +123,7 @@ We will assume that `\(\text{Y}_{0i}\)` and `\(\text{Y}_{1i}\)` vary smoothly in
 name: rd-examples
 ## Examples
 
-We often apply regression-discontinuity designs in setting with some arbitrary threshold embeded within some bureaucratic decision.
+We often apply regression-discontinuity designs in settings with some arbitrary threshold embeded within some bureaucratic decision.
 
 --
 
@@ -143,7 +143,7 @@ In some cases, "treatment" is definite once we exceed the threshold.
 name: sharp-fuzzy
 ## Sharp *vs.* fuzzy
 
-We distinguish RDs by how strong/definitive of the threshold is.
+We distinguish RDs by how strong/definitive the threshold is.
 
 --
 
@@ -178,7 +178,7 @@ With .attn[sharp regression discontinuity], the probability of treatment changes
 
 --
 
-Thus, treatment status totally depends upon whether `\(\text{X}_{i}\geq c\)`, _i.e._,
+Thus, treatment status entirely depends upon whether `\(\text{X}_{i}\geq c\)`, _i.e._,
 --
 $$
 `\begin{align}
@@ -193,7 +193,7 @@ To estimate the causal effect of `\(\text{D}_{i}\)` on `\(\text{Y}_{i}\)`, we .p
 name: sharp-formal
 ## More formally
 
-We can write the comparison of means at the threshold as
+We can write the comparison of means .hi-slate[at the threshold] as
 
 `\(\lim_{x\downarrow c} \mathop{E}\left[ \text{Y}_{i}\mid \text{X}_{i} = x \right] - \lim_{x\uparrow c} \mathop{E}\left[ \text{Y}_{i}\mid \text{X}_{i} = x \right]\)`
 
@@ -219,7 +219,7 @@ We can write the comparison of means at the threshold as
 
 --
 
-_I.e._, Because we don't observe `\(\color{#6A5ACD}{\text{Y}_{0i}}\)` for treated individuals, we extrapolate `\(\mathop{E}\left[ \color{#6A5ACD}{\text{Y}_{0i}} \mid \text{X}_{i} = c - \varepsilon \right]\)` to `\(\mathop{E}\left[ \color{#6A5ACD}{\text{Y}_{0i}} \mid \text{X}_{i} = x + \varepsilon \right]\)` for small `\(\varepsilon\)`.
+_I.e._, Because we don't observe `\(\color{#6A5ACD}{\text{Y}_{0i}}\)` for treated individuals, we extrapolate `\(\mathop{E}\left[ \color{#6A5ACD}{\text{Y}_{0i}} \mid \text{X}_{i} = c - \varepsilon \right]\)` to `\(\mathop{E}\left[ \color{#6A5ACD}{\text{Y}_{0i}} \mid \text{X}_{i} = c + \varepsilon \right]\)` for small `\(\varepsilon\)`.
 ---
 name: sharp-est
 ## Estimation
@@ -363,7 +363,7 @@ name: sharp-practice
 
 [Gelman and Imbens (2018)](https://amstat.tandfonline.com/doi/abs/10.1080/07350015.2017.1366909) on functional form:
 
-&gt; We argue that .pink[controlling for global high-order polynomials in regression discontinuity analysis is a flawed approach] with three major problems: it leads to noisy estimates, sensitivity to the degree of the polynomial, and poor coverage of confidence intervals. We recommend researchers instead use estimators based on local linear or quadratic polynomials or othersmooth functions.
+&gt; We argue that .pink[controlling for global high-order polynomials in regression discontinuity analysis is a flawed approach] with three major problems: it leads to noisy estimates, sensitivity to the degree of the polynomial, and poor coverage of confidence intervals. We recommend researchers instead use estimators based on local linear or quadratic polynomials or other smooth functions.
 
 --
 
@@ -392,7 +392,7 @@ name: sharp-more-estimation
 
 .note[Assumptions]
 1. `\(\color{#6A5ACD}{\mathop{E}\left[\text{Y}_{0i} | \text{X}_{i} = x\right]}\)` is linear in `\(x\)`, *i.e.*, `\(\color{#6A5ACD}{\mathop{E}\left[ \text{Y}_{0i} \mid \text{X}_{i} \right]} = \color{#6A5ACD}{\alpha + \beta \text{X}_{i}}\)`
-2. Treatment effect does not depend upon `\(\tau\)`, *i.e.*, `\(\mathop{E}\left[ \text{Y}_{1i} - \text{Y}_{0i} \mid \text{X}_{i} \right] = \tau\)`
+2. Treatment effect does not depend upon `\(\text{X}_i\)`, *i.e.*, `\(\mathop{E}\left[ \text{Y}_{1i} - \text{Y}_{0i} \mid \text{X}_{i} \right] = \tau\)`
 
 where (1) comes from linearity and (2) comes from common slopes.
 
@@ -451,6 +451,7 @@ Now treatment effects can vary with `\(\text{X}_{i}\)`.
 .pink[†] See [Appendix](#srd-appendix) for omitted steps.
 ]
 ---
+exclude: true
 ## Estimation: Additional
 
 
