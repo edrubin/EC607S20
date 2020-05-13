@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+  <head>
+    <title>Regression Discontinuity</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Edward Rubin" />
+    <link href="09-rd_files/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="09-rd_files/remark-css-0.0.1/metropolis.css" rel="stylesheet" />
+    <link href="09-rd_files/remark-css-0.0.1/metropolis-fonts.css" rel="stylesheet" />
+    <link rel="stylesheet" href="my-css.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Regression Discontinuity
+## EC 607, Set 9
+### Edward Rubin
+### Spring 2020
+
+---
+
+class: inverse, middle
+
+
+
+&lt;style type="text/css"&gt;
+@media print {
+  .has-continuation {
+    display: block !important;
+  }
+}
+&lt;/style&gt;
+
+$$
+`\begin{align}
+  \def\ci{\perp\mkern-10mu\perp}
+\end{align}`
+$$
+
+
+# Prologue
+
+---
+name: schedule
+
+# Schedule
+
+## Last time
+
+- Introduction to selection-on-unobservables designs
+- Instrumental variables (IV) and two-stage least squares (2SLS)
+
+## Today
+
+Regression discontinuity .super[.pink[†]]
+
+.footnote[
+.pink[†] These notes largely follow notes from [Michael Anderson](https://are.berkeley.edu/~mlanderson/ARE_Website/Home.html), [Imbens and Lemieux (2008)](https://www.sciencedirect.com/science/article/pii/S0304407607001091), and notes from [Teppei Yamamoto](http://web.mit.edu/teppei/www/).
+]
+
+## Upcoming
+
+- Problem set; office hours Friday?
+- Project
+
+---
+layout: true
+# Regression discontinuity
+
+---
+class: inverse, middle
+---
+name: rd-setup
+## Setup
+
+We're still in the game of estimating the effect of a potentially endogenous treatment `\(\text{D}_{i}\)` on an outcome `\(\text{Y}_{i}\)`.
+
+--
+
+.attn[Regression discontinuity] (.attn[RD]) offers a particularly clear/clean research design based upon an arbitrary threshold (the *discontinuity*).
+
+--
+
+That said, most RDs boil down to an implementation of IV.
+
+--
+
+In addition, while RD is all the rage in modern applied econometrics, [Thistlewaite and Campbell](https://obsstudies.org/wp-content/uploads/2017/01/regression_discontinuity_all_comments-1.pdf) wrote about it back in 1960.
+
+---
+name: rd-framework
+## Our framework
+
+Back to our potential-outcome framework.
+
+--
+
+We want to know the effect of `\(\text{D}_{i}\)` on `\(\text{Y}_{i}\)`.
+$$
+`\begin{align}
+  \text{Y}_{i} = \text{D}_{i} \text{Y}_{1i} + (1-\text{D}_{i}) \text{Y}_{0i}
+\end{align}`
+$$
+
+--
+
+.hi[New:] Suppose `\(\text{D}_{i}\)` is determined.super[.pink[†]] by whether some variable `\(\text{X}_{i}\)` crosses a threshold `\(c\)` (the discontinuity).
+
+.footnote[
+.pink[†] At least in part.
+]
+
+--
+
+The variable `\(\text{X}_{i}\)` need not be randomly assigned—we will assume it is not (_i.e._, `\(\text{X}_{i}\)` correlates with `\(\text{Y}_{0i}\)` and `\(\text{Y}_{1i}\)`).
+
+--
+
+We will assume that `\(\text{Y}_{0i}\)` and `\(\text{Y}_{1i}\)` vary smoothly in `\(\text{X}_{i}\)`.
+
+---
+name: rd-examples
+## Examples
+
+We often apply regression-discontinuity designs in setting with some arbitrary threshold embeded within some bureaucratic decision.
+
+--
+
+- An elector candidate wins if her vote share exceeds her competitors.
+- Election runoffs are triggered if "winner" is below 50%.
+- Antidiscrimination laws only apply to firms with &gt;15 employees.
+- Prisoners are eligible for early parole if some score exceeds a threshold.
+- An individual is eligible for Medicare if her age is at least 65.
+- You get a ticket if your speed exceeds the speed limit.
+- Fifteen-percent discount at Sizzler if your age exceeds 60.
+- Counties with PM.sub[2.5] &gt; 35 μg/m.super[3] are *out of attainment*.
+
+--
+
+In some cases, "treatment" is definite once we exceed the threshold.
+---
+name: sharp-fuzzy
+## Sharp *vs.* fuzzy
+
+We distinguish RDs by how strong/definitive of the threshold is.
+
+--
+
+In .attn[sharp RDs], individuals move from control to treatment when their `\(\text{X}_{i}\)` passes our threshold `\(c\)`
+--
+, _i.e._, `\(\text{D}_{i}\)` switches from 0 to 1 when `\(\text{X}_{i}\)` moves across `\(c\)`.
+
+
+--
+
+.ex[_E.g._,] a politician wins an election when the difference between her vote share and her competitor's vote share exceeds zero.
+
+--
+
+In .attn[fuzzy RDs], the *probability of treatment* `\(\mathop{\text{Pr}}\left( \text{D}_{i}=1 \right)\)` discontinuously jumps at the threshold `\(c\)`, but it does not move from 0 to 1.
+
+--
+
+.ex[_E.g._,] crossing some GRE threshold discontinuously increases your chances of getting into some grad schools (but doesn't guarantee admittance).
+---
+layout: true
+# Sharp RDs
+
+---
+name: sharp
+class: inverse, middle
+---
+name: sharp-setup
+## Setup
+
+With .attn[sharp regression discontinuity], the probability of treatment changes from 0 to 1 as `\(\text{X}_{i}\)` moves across threshold `\(c\)`.
+
+--
+
+Thus, treatment status totally depends upon whether `\(\text{X}_{i}\geq c\)`, _i.e._,
+--
+$$
+`\begin{align}
+  \text{D}_{i} = \mathbb{I}\!\left\{ \text{X}_{i}\geq c \right\}
+\end{align}`
+$$
+
+--
+
+To estimate the causal effect of `\(\text{D}_{i}\)` on `\(\text{Y}_{i}\)`, we .pink[compare the mean] of `\(\text{Y}_{i}\)` .pink[just *above* the threshold to the mean] of `\(\text{Y}_{i}\)` .pink[just *below* the threshold].
+---
+name: sharp-formal
+## More formally
+
+We can write the comparison of means at the threshold as
+
+`\(\lim_{x\downarrow c} \mathop{E}\left[ \text{Y}_{i}\mid \text{X}_{i} = x \right] - \lim_{x\uparrow c} \mathop{E}\left[ \text{Y}_{i}\mid \text{X}_{i} = x \right]\)`
+
+--
+.pad-left[
+`\(=\lim_{x\downarrow c} \mathop{E}\left[ \color{#e64173}{\text{Y}_{1i}}\mid \text{X}_{i} = x \right] - \lim_{x\uparrow c} \mathop{E}\left[ \color{#6A5ACD}{\text{Y}_{0i}}\mid \text{X}_{i} = x \right]\)`
+]
+
+--
+.pad-left[
+`\(=\tau_\text{SRD}\)`
+]
+
+--
+
+.note[Assumption] `\(\mathop{E}\left[ \color{#e64173}{\text{Y}_{1i}} \mid \text{X}_{i} = x\right]\)` and `\(\mathop{E}\left[ \color{#6A5ACD}{\text{Y}_{0i}} \mid \text{X}_{i} = x \right]\)` are continuous in `\(x\)`.
+
+--
+
+.pad-left[
+`\(\implies \tau_\text{SRD} = \mathop{E}\left[ \color{#e64173}{\text{Y}_{1i}} - \color{#6A5ACD}{\text{Y}_{0i}} \mid \text{X}_{i} = c \right]\)`
+]
+
+--
+
+_I.e._, Because we don't observe `\(\color{#6A5ACD}{\text{Y}_{0i}}\)` for treated individuals, we extrapolate `\(\mathop{E}\left[ \color{#6A5ACD}{\text{Y}_{0i}} \mid \text{X}_{i} = c - \varepsilon \right]\)` to `\(\mathop{E}\left[ \color{#6A5ACD}{\text{Y}_{0i}} \mid \text{X}_{i} = x + \varepsilon \right]\)` for small `\(\varepsilon\)`.
+---
+name: sharp-est
+## Estimation
+
+Thus, we estimate
+$$
+`\begin{align}
+  \tau_\text{SRD} = \lim_{x\downarrow c} \mathop{E}\left[ \text{Y}_{i} \mid \text{X}_{i} = x \right] - \lim_{x\uparrow c} \mathop{E}\left[ \text{Y}_{i} \mid \text{X}_{i} = x \right]
+\end{align}`
+$$
+as the diffrence between two regression functions estimated "near" `\(c\)`.
+
+--
+
+We must stay "near" to `\(c\)` to minimize the bias from extrapolating `\(\mathop{E}\left[ \color{#6A5ACD}{\text{Y}_{0i}} \mid \text{X}_{i} = c - \varepsilon \right]\)` to `\(\mathop{E}\left[ \color{#6A5ACD}{\text{Y}_{0i}} \mid \text{X}_{i} = c + \varepsilon \right]\)` (and assuming continuity).
+---
+name: sharp-ex
+layout: false
+class: clear, middle
+
+.ex[Ex.] Is there effect of a political party winning an election on that party's likelihood of winning the following election?
+
+Is there a benefit of incumbency (at the party level)?.super[.pink[†]]
+
+.footnote[
+.pink[†] [Lee (2008)](https://www.sciencedirect.com/science/article/pii/S0304407607001121) addresses this question via RD. [Caughey and Sekhon (2011)](https://doi.org/10.1093/pan/mpr032) discuss RD in this setting.
+]
+
+---
+layout: true
+class: clear
+
+---
+Let's start with `\(\color{#6A5ACD}{\mathop{E}\left[ \text{Y}_{0i} \mid \text{X}_{i} \right]}\)`
+
+
+
+&lt;img src="09-rd_files/figure-html/s1-1.svg" style="display: block; margin: auto;" /&gt;
+---
+count: false
+Let's start with `\(\color{#6A5ACD}{\mathop{E}\left[ \text{Y}_{0i} \mid \text{X}_{i} \right]}\)` and `\(\color{#e64173}{\mathop{E}\left[ \text{Y}_{1i} \mid \text{X}_{i} \right]}\)`.
+
+&lt;img src="09-rd_files/figure-html/s2-1.svg" style="display: block; margin: auto;" /&gt;
+---
+You only win an election if your .hi-slate[margin of victory exceeds zero].
+
+&lt;img src="09-rd_files/figure-html/s3-1.svg" style="display: block; margin: auto;" /&gt;
+---
+`\(\color{#e64173}{\mathop{E}\left[ \text{Y}_{1i} \mid \text{X}_{i} \right]} - \color{#6A5ACD}{\mathop{E}\left[ \text{Y}_{0i} \mid \text{X}_{i} \right]}\)` .hi-slate[at the discontinuity] gives `\(\color{#FFA500}{\tau_\text{SRD}}\)`.
+
+&lt;img src="09-rd_files/figure-html/s4-1.svg" style="display: block; margin: auto;" /&gt;
+---
+
+Real data are a bit trickier. We must estimate `\(\color{#e64173}{\mathop{E}\left[ \text{Y}_{1i} \mid \text{X}_{i} \right]}\)` and `\(\color{#6A5ACD}{\mathop{E}\left[ \text{Y}_{0i} \mid \text{X}_{i} \right]}\)`.
+
+
+
+
+
+&lt;img src="09-rd_files/figure-html/s5-1.svg" style="display: block; margin: auto;" /&gt;
+---
+class: clear, middle
+
+.note[Questions]
+
+1. How should we estimate `\(\color{#e64173}{\mathop{E}\left[ \text{Y}_{1i} \mid \text{X}_{i} \right]}\)` and `\(\color{#6A5ACD}{\mathop{E}\left[ \text{Y}_{0i} \mid \text{X}_{i} \right]}\)`?
+
+2. How much data should we use—_i.e._, what is the right .attn[bandwidth] size?
+
+---
+.note[Option 1a] Linear regression with constant slopes (and all data)
+
+&lt;img src="09-rd_files/figure-html/s6-1.svg" style="display: block; margin: auto;" /&gt;
+---
+.note[Option 1a] Linear regression with constant slopes (and all data)
+
+&lt;img src="09-rd_files/figure-html/s7-1.svg" style="display: block; margin: auto;" /&gt;
+---
+.note[Option 1b] Linear regression with constant slopes; limited to +/- 50%.
+
+&lt;img src="09-rd_files/figure-html/s8-1.svg" style="display: block; margin: auto;" /&gt;
+---
+.note[Option 2a] Linear regression with differing slopes (and all data)
+
+&lt;img src="09-rd_files/figure-html/s9-1.svg" style="display: block; margin: auto;" /&gt;
+---
+.note[Option 2b] Linear regression with differing slopes; limited to +/- 50%.
+
+&lt;img src="09-rd_files/figure-html/s10-1.svg" style="display: block; margin: auto;" /&gt;
+---
+.note[Option 2c] Linear regression with differing slopes; limited to +/- 25%.
+
+&lt;img src="09-rd_files/figure-html/s11-1.svg" style="display: block; margin: auto;" /&gt;
+---
+.note[Option 3] Differing quadratic regressions (limited to +/- 50%).
+
+&lt;img src="09-rd_files/figure-html/s12-1.svg" style="display: block; margin: auto;" /&gt;
+---
+.note[Option 4a] Differing local (LOESS) regressions (limited to +/- 50%).
+
+&lt;img src="09-rd_files/figure-html/s13-1.svg" style="display: block; margin: auto;" /&gt;
+---
+.note[Option 4b] Differing local (LOESS) regressions (all data).
+
+&lt;img src="09-rd_files/figure-html/s14-1.svg" style="display: block; margin: auto;" /&gt;
+---
+.note[Note] Functional form can be very important.
+
+&lt;img src="09-rd_files/figure-html/s15a-1.svg" style="display: block; margin: auto;" /&gt;
+---
+count: false
+.note[Note] Functional form can be very important.
+
+&lt;img src="09-rd_files/figure-html/s15b-1.svg" style="display: block; margin: auto;" /&gt;
+---
+count: false
+.note[Note] Functional form can be very important.
+
+&lt;img src="09-rd_files/figure-html/s15c-1.svg" style="display: block; margin: auto;" /&gt;
+---
+count: false
+.note[Note] Functional form can be very important.
+
+&lt;img src="09-rd_files/figure-html/s15d-1.svg" style="display: block; margin: auto;" /&gt;
+---
+count: false
+.note[Note] Functional form can be very important.
+
+&lt;img src="09-rd_files/figure-html/s15e-1.svg" style="display: block; margin: auto;" /&gt;
+---
+The continuity of `\(\color{#6A5ACD}{\mathop{E}\left[ \text{Y}_{0i}\mid \text{X}_{i} = x\right]}\)` (in `\(x\)`) is also very important. No sorting.
+
+&lt;img src="09-rd_files/figure-html/s16-1.svg" style="display: block; margin: auto;" /&gt;
+---
+layout: true
+# Sharp RDs
+
+---
+name: sharp-practice
+## In practice
+
+[Gelman and Imbens (2018)](https://amstat.tandfonline.com/doi/abs/10.1080/07350015.2017.1366909) on functional form:
+
+&gt; We argue that .pink[controlling for global high-order polynomials in regression discontinuity analysis is a flawed approach] with three major problems: it leads to noisy estimates, sensitivity to the degree of the polynomial, and poor coverage of confidence intervals. We recommend researchers instead use estimators based on local linear or quadratic polynomials or othersmooth functions.
+
+--
+
+See [Imbens and Kalyanaraman (2012)](https://academic.oup.com/restud/article-abstract/79/3/933/1533189) for optimal bandwidth selection.
+---
+name: sharp-more-estimation
+## Estimation
+
+1. .hi[Trim data] to a reasonable window around the threshold `\(c\)`.
+
+--
+
+2. .hi[Recode] `\(\color{#e64173}{\text{X}_{i}}\)` (the "forcing variable") as deviation from `\(c\)`, *i.e.*, `\(\widetilde{\text{X}}_i = \text{X}_{i} - c\)`
+  - `\(\widetilde{\text{X}}_{i} = 0\)` if `\(\text{X}_{i}=c\)`
+  - `\(\widetilde{\text{X}}_{i} &lt; 0\)` if `\(\text{X}_{i}&lt;c\)` and thus `\(\text{D}_{i}=0\)`
+  - `\(\widetilde{\text{X}}_{i} &gt; 0\)` if `\(\text{X}_{i}&gt;c\)` and thus `\(\text{D}_{i}=1\)`
+
+--
+
+3. Determine a model to .hi[estimate] `\(\color{#e64173}{\mathop{E}\left[ \text{Y}_{i} \mid \widetilde{\text{X}}_i \right]}\)` for `\(\widetilde{\text{X}}_{i}\)` above and below 0
+  - Linear with common slopes for `\(\mathop{E}\left[ \text{Y}_{i}\mid \widetilde{\text{X}}_i &lt; 0 \right]\)` and `\(\mathop{E}\left[ \text{Y}_{i}\mid \widetilde{\text{X}}_i &gt; 0 \right]\)`
+  - Linear/quadratic/polynomial with differing slopes
+  - LOESS, kernel regression, *etc.*
+---
+## Estimation: Linear, common slope
+
+.note[Assumptions]
+1. `\(\color{#6A5ACD}{\mathop{E}\left[\text{Y}_{0i} | \text{X}_{i} = x\right]}\)` is linear in `\(x\)`, *i.e.*, `\(\color{#6A5ACD}{\mathop{E}\left[ \text{Y}_{0i} \mid \text{X}_{i} \right]} = \color{#6A5ACD}{\alpha + \beta \text{X}_{i}}\)`
+2. Treatment effect does not depend upon `\(\tau\)`, *i.e.*, `\(\mathop{E}\left[ \text{Y}_{1i} - \text{Y}_{0i} \mid \text{X}_{i} \right] = \tau\)`
+
+where (1) comes from linearity and (2) comes from common slopes.
+
+--
+
+`\(\implies \color{#e64173}{\mathop{E}\left[ \text{Y}_{1i} \mid \text{X}_{i} \right]} = \tau + \color{#6A5ACD}{\mathop{E}\left[ \text{Y}_{0i} \mid \text{X}_{i} \right]} = \tau + \color{#6A5ACD}{\alpha + \beta \text{X}_{i}}\)`
+
+--
+
+Recall our definition of `\(\text{Y}_{i} = \text{D}_{i} \color{#e64173}{\text{Y}_{1i}} + (1-\text{D}_{i}) \color{#6A5ACD}{\text{Y}_{0i}}\)`.
+
+--
+
+`\(\mathop{E}\left[ \text{Y}_{i} \mid \text{X}_{i},\,\text{D}_{i} \right] =\)`
+--
+ `\(\text{D}_{i} \color{#e64173}{\mathop{E}\left[ \text{Y}_{1i}\mid \text{X}_{i} \right]} + (1- \text{D}_{i})\color{#6A5ACD}{\mathop{E}\left[ \text{Y}_{0i}\mid \text{X}_{i} \right]}\)`
+--
+&lt;br&gt; `\(\quad = \alpha + \tau \text{D}_{i} + \beta \text{X}_{i}\)`
+--
+ `\(= \alpha + \tau \text{D}_{i} + \beta \left(\widetilde{\text{X}}_{i} + c\right)\)`
+--
+ `\(= \widetilde{\alpha} + \tau \text{D}_{i} + \beta \widetilde{\text{X}}_{i}\)`
+--
+&lt;br&gt; which we can estimate by regressing `\(\text{Y}_{i}\)` on `\(\text{D}_{i}\)` and `\(\widetilde{\text{X}}_{i}\)`.
+---
+name: srd-linear-diff
+## Estimation: Linear, differing slopes
+
+.note[Assumption] `\(\color{#6A5ACD}{\mathop{E}\left[\text{Y}_{0i} | \text{X}_{i} = x\right]}\)` and `\(\color{#e64173}{\mathop{E}\left[\text{Y}_{1i} | \text{X}_{i} = x\right]}\)` are linear in `\(x\)`, *i.e.*, `\(\color{#6A5ACD}{\mathop{E}\left[ \text{Y}_{0i} \mid \text{X}_{i} \right]} = \color{#6A5ACD}{\alpha_0 + \beta_0 \text{X}_{i}}\)` and `\(\color{#e64173}{\mathop{E}\left[ \text{Y}_{1i} \mid \text{X}_{i} \right]} = \color{#e64173}{\alpha_1 + \beta_1 \text{X}_{i}}\)`
+
+Now treatment effects can vary with `\(\text{X}_{i}\)`.
+
+--
+
+`\(\implies \mathop{E}\left[\color{#e64173}{\text{Y}_{1i}} - \color{#6A5ACD}{\text{Y}_{0i}} \mid \text{X}_{i} \right] = \left( \alpha_1 - \alpha_0 \right) + \left( \beta_1 - \beta_0 \right)\text{X}_{i}\)`
+
+--
+
+`\(\mathop{E}\left[ \text{Y}_{i} \mid \text{X}_{i},\,\text{D}_{i} \right]\)`
+--
+ `\(=\text{D}_{i} \color{#e64173}{\mathop{E}\left[ \text{Y}_{1i}\mid \text{X}_{i} \right]} + (1- \text{D}_{i})\color{#6A5ACD}{\mathop{E}\left[ \text{Y}_{0i}\mid \text{X}_{i} \right]}\)`
+--
+&lt;br&gt;
+ `\(\color{#ffffff}{\mathop{E}\left[ \text{Y}_{i} \mid \text{X}_{i},\,\text{D}_{i} \right]}= \color{#6A5ACD}{\alpha_0 + \beta_0 \text{X}_{i}} + (\color{#e64173}{\alpha_1} - \color{#6A5ACD}{\alpha_0})\text{D}_{i} + (\color{#e64173}{\beta_1} - \color{#6A5ACD}{\beta_0})\text{D}_{i}\text{X}_{i} \color{#ffffff}{\bigg|}\)`
+--
+&lt;br&gt;
+ `\(\color{#ffffff}{\mathop{E}\left[ \text{Y}_{i} \mid \text{X}_{i},\,\text{D}_{i} \right]}= \widetilde{\alpha} + \beta_0 \widetilde{\text{X}}_{i} + \tau \text{D}_{i} + \widetilde{\beta}\text{D}_{i}\widetilde{\text{X}}_{i}\)`
+
+--
+
+`\(\tau\)` is the LATE at `\(\widetilde{\text{X}}_{i} = 0\)` `\(\left(\text{X}_{i}=c\right)\)`.
+--
+ Estimate: Regress `\(\text{Y}_{i}\)` in `\(\widetilde{\text{X}}_{i}\)`, `\(\text{D}_{i}\)`, .it[and] `\(\text{D}_{i}\widetilde{\text{X}}_{i}\)`..super[.pink[†]]
+
+.footnote[
+.pink[†] See [Appendix](#srd-appendix) for omitted steps.
+]
+---
+## Estimation: Additional
+
+
+---
+layout: true
+# Fuzzy RDs
+
+---
+name: fuzzy
+class: inverse, middle
+---
+name: fuzzy-setup
+## Setup
+
+As with their sharp-RD relatives, .attn[fuzzy RDs] take advantage of a discontinuous change in treatment assignment across some threshold `\(c\)`.
+
+--
+
+In a .attn[fuzzy regression discontinuity], the *probability* of treatment changes discontinuously as `\(\text{X}_{i}\)` crosses `\(c\)`
+--
+, but it is no longer deterministic.
+
+--
+
+Formally,
+$$
+`\begin{align}
+  0 &lt; \lim_{x\downarrow c} \mathop{\text{Pr}}\left(\text{D}_{i} = 1\mid \text{X}_{i} = x\right) - \lim_{x\uparrow c} \mathop{\text{Pr}}\left(\text{D}_{i} = 1\mid \text{X}_{i} = x\right) &lt; 1
+\end{align}`
+$$
+--
+
+.ex[*Ex.*,] Exceeding a minimum GRE requirement for graduate school.
+---
+## Threshold effects
+
+We now have .b[two effects] of `\(\text{X}_{i}\)` crossing our threshold `\(c\)`.
+
+--
+
+1. The effect of `\(\text{X}_{i}\)` crossing `\(c\)` .blue[on our outcome]
+$$
+`\begin{align}
+  \color{#3b3b9a}{\lim_{x\downarrow c} \mathop{E}\left[\text{Y}_{i}\mid \text{X}_{i} = x\right] - \lim_{x\uparrow c} \mathop{E}\left[\text{Y}_{i}\mid \text{X}_{i} = x\right]}
+\end{align}`
+$$
+
+--
+
+1. The effect of `\(\text{X}_{i}\)` crossing `\(c\)` .turquoise[on the probability of treatment]
+$$
+`\begin{align}
+   \color{#20B2AA}{\lim_{x\downarrow c} \mathop{E}\left[\text{D}_{i}\mid \text{X}_{i} = x\right] - \lim_{x\uparrow c} \mathop{E}\left[\text{D}_{i}\mid \text{X}_{i} = x\right]}
+\end{align}`
+$$
+
+--
+
+The treatment effect defined by a fuzzy RD is the ratio of (.blue[1]) to (.turquoise[2])
+$$
+`\begin{align}
+  \tau_\text{FRD}  = \dfrac{\color{#3b3b9a}{\lim_{x\downarrow c} \mathop{E}\left[\text{Y}_{i}\mid \text{X}_{i} = x\right] - \lim_{x\uparrow c} \mathop{E}\left[\text{Y}_{i}\mid \text{X}_{i} = x\right]}}{\color{#20B2AA}{\lim_{x\downarrow c} \mathop{E}\left[\text{D}_{i}\mid \text{X}_{i} = x\right] - \lim_{x\uparrow c} \mathop{E}\left[\text{D}_{i}\mid \text{X}_{i} = x\right]}}
+\end{align}`
+$$
+---
+name: fuzzy-iv
+## An old friend
+
+This definition of the fuzzy-RD treatment effect
+$$
+`\begin{align}
+  \tau_\text{FRD}  = \dfrac{\color{#3b3b9a}{\lim_{x\downarrow c} \mathop{E}\left[\text{Y}_{i}\mid \text{X}_{i} = x\right] - \lim_{x\uparrow c} \mathop{E}\left[\text{Y}_{i}\mid \text{X}_{i} = x\right]}}{\color{#20B2AA}{\lim_{x\downarrow c} \mathop{E}\left[\text{D}_{i}\mid \text{X}_{i} = x\right] - \lim_{x\uparrow c} \mathop{E}\left[\text{D}_{i}\mid \text{X}_{i} = x\right]}}
+\end{align}`
+$$
+should remind you of something
+--
+—.hi-slate[IV], where `\(\text{Z}_{i} = \mathbb{I}\left\{ \text{X}_{i}\geq c \right\}\)`.
+
+--
+
+Accordingly, fuzzy RDs are going to have the .hi-slate[same requirements and interpretation as IV].
+---
+name: fuzzy-formal
+## More formally
+
+Let `\(\text{D}_{i}\left( x^* \right)\)` denote the .hi-slate[potential treatment status] of `\(i\)` .hi-slate[with threshold] `\(\color{#314f4f}{x^*}\)`.
+
+Why write potential treatment status `\(\text{D}_{i}\)` a function of the threshold?
+
+--
+
+Changing the threshold (*e.g.*, voting age) generally makes more sense than changing `\(\text{X}_{i}\)` (*e.g.*, age)..super[.pink[†]]
+
+.footnote[
+.pink[†] This observation/motivation can help with inference.
+]
+
+
+--
+
+*I.e.*, changing the threshold changes treatment statuses at the marginal.
+
+--
+
+.note[Assumption] `\(\text{D}_{i}\left(x^*\right)\)` is non-increasing in `\(x^*\)` at `\(x^*=c\)`.
+
+This is our monotonicity assumption for fuzzy RDs.
+--
+ If we raise `\(x^*\)` from `\(c\)` to `\(c+\epsilon\)`, no one joins treatment—no defiers.
+
+---
+## Compliance
+
+Our .attn[compliers] in this setting are individuals such that
+
+$$
+`\begin{align}
+  &amp;\lim_{x^*\downarrow \text{X}_{i}} \text{D}_{i}\left( x^* \right) = 0
+  &amp;\lim_{x^*\uparrow \text{X}_{i}} \text{D}_{i}\left( x^* \right) = 1
+\end{align}`
+$$
+
+--
+
+*i.e.*, .attn[compliers] are only treated when `\(x^*\)` (the threshold) is *below* their `\(\text{X}_{i}\)`.
+
+--
+
+Back to the fuzzy RD treatment effect
+
+`\(\tau_\text{FRD} = \dfrac{\lim_{x\downarrow c} \mathop{E}\left[\text{Y}_{i}\mid \text{X}_{i} = x\right] - \lim_{x\uparrow c} \mathop{E}\left[\text{Y}_{i}\mid \text{X}_{i} = x\right]}{\lim_{x\downarrow c} \mathop{E}\left[\text{D}_{i}\mid \text{X}_{i} = x\right] - \lim_{x\uparrow c} \mathop{E}\left[\text{D}_{i}\mid \text{X}_{i} = x\right]}\)`
+
+--
+
+`\(\color{#ffffff}{\tau_\text{FRD}}= \mathop{E}[ \color{#e64173}{\text{Y}_{1i}} - \color{#6A5ACD}{\text{Y}_{0i}} | i\)` is a complier and `\(\text{X}_{i}=c]\)`.
+
+--
+
+Thus, `\(\tau_\text{FRD}\)` can be a *very local* LATE.
+---
+layout: true
+# Graphical analysis
+
+---
+class: inverse, middle
+name: graph
+---
+name: graph-gen
+## General
+
+.hi-slate[RD analyses hinge on their graphical analyses.]
+
+If the discontinuity is not graphically apparent, most people are not going to care about the results of a few tortured regressions.
+
+--
+
+You're arguing you know that treatment assignment changes across the threshold. If your reader/viewer cannot see it, they're likely not going to believe your regression tables..super[.pink[†]]
+
+.footnote[
+.pink[†] This skepticism may be well founded. We know RDs are sensitive to functional form—and researchers have been known to *p-hack*.
+]
+---
+## Three figures
+
+Most RD analyses will have some subset of three types of figures.
+
+1. .hi-slate[Outcomes] by the running/forcing variable] `\(\left( \text{X}_{i} \right)\)`
+--
+&lt;br&gt;.it[Do we observe a treatment effect across the discontinuity?]
+
+--
+
+1. .hi-slate[Covariates] by the running/forcing variable `\(\left( \text{X}_{i} \right)\)`
+--
+&lt;br&gt;.it[Are covariates smooth/balanced across the discontinuity?]
+
+--
+
+1. .hi-slate[Density] of running/forcing variable `\(\left( \text{X}_{i} \right)\)`
+--
+&lt;br&gt;.it[Is there evidence of sorty into treatment (across the threshold)?]
+
+---
+name: graph-outcome
+## Outcomes by running variable
+
+These figures tend to show the average value of the outcome `\(\text{Y}_{i}\)` at evenly spaced bins of the running variable `\(\text{X}_{i}\)`.
+
+--
+
+We have two parameter choices
+
+1. Binwidth `\(\left( h \right)\)`
+2. Numbers of bins below and above threshold `\(\left( K_0,\, K_1 \right)\)`
+
+that yield `\(K=K_0+K_1\)` bins `\(\left( k=1,\, \ldots,\, K \right)\)`
+$$
+`\begin{align}
+  b_k = c - \left( K_0 - k + 1 \right) \times h
+\end{align}`
+$$
+
+--
+
+We then calculate summaries for each bin.
+
+---
+## Outcomes by running variable
+
+The bin's .hi-slate[number of observations], `\(N_k\)`
+$$
+`\begin{align}
+   N_k = \sum_{i=1}^N \mathbb{I}\left\{ b_k &lt; \text{X}_{i} \le b_{k+1} \right\}
+\end{align}`
+$$
+--
+The .hi-slate[average treatment level] in the bin, `\(\overline{D}_k\)` (for fuzzy RDs)
+$$
+`\begin{align}
+   \overline{D}_k = \dfrac{1}{N_k} \sum_{i=1}^N \text{D}_{i} \times \mathbb{I}\left\{ b_k &lt; \text{X}_{i} \le b_{k+1} \right\}
+\end{align}`
+$$
+--
+The .hi-slate[average outcome] in the bin, `\(\overline{Y}_k\)`
+$$
+`\begin{align}
+   \overline{Y}_k = \dfrac{1}{N_k} \sum_{i=1}^N \text{Y}_{i} \times \mathbb{I}\left\{ b_k &lt; \text{X}_{i} \le b_{k+1} \right\}
+\end{align}`
+$$
+---
+exclude: true
+
+
+
+
+---
+## Outcomes by running variable
+
+We then plot `\(\overline{\text{D}}_k\)` against the midpoint of each bin.
+
+--
+
+.qa[Q] Does crossing `\(c\)` clearly affect `\(\mathop{\text{Pr}}\left(\text{D}_{i}=1\right)\)`? .grey-light[(Fuzzy RD first stage)]
+
+--
+
+&lt;img src="09-rd_files/figure-html/graph-d-1.svg" style="display: block; margin: auto auto auto 0;" /&gt;
+---
+## Outcomes by running variable
+
+And then plot `\(\overline{\text{Y}}_k\)` against the midpoint of each bin.
+
+.qa[Q] Does crossing `\(c\)` clearly affect our outcome `\(\text{Y}_{i}\)`? .grey-light[(Fuzzy RD reduced form)]
+
+&lt;img src="09-rd_files/figure-html/graph-y-1.svg" style="display: block; margin: auto auto auto 0;" /&gt;
+
+---
+name: graph-cov
+## Covariates by running variable
+
+Now we apply the same approach to covariates `\(\left( \text{Z}_{i} \right)\)`.
+
+--
+
+.qa[Q] Are covariates .hi-slate[smooth] across `\(c\)`? If not, your RD may be invalid.
+
+--
+
+&lt;img src="09-rd_files/figure-html/graph-z-1.svg" style="display: block; margin: auto auto auto 0;" /&gt;
+---
+name: graph-run
+## Density of running variable
+
+Finally we looking for other violations of smoothness—particularly in form gaming the threshold.
+
+In other words: Are individuals .hi-slate[bunching] just above or just below the threshold?
+
+If so, folks just below the threshold don't give us the clean counterfactual that we want for the folks just above the threshold.
+
+McCrary (2008) suggests testing the density of `\(\text{X}_{i}\)` at `\(c\)`.
+---
+name: graph-run
+## Density of running variable
+
+Effectively, we can plot `\(N_k\)` at the midpoint of each bin.
+
+--
+
+.qa[Q] Is the distribution of `\(\text{X}_{i}\)` smooth across `\(c\)`?
+
+--
+
+&lt;img src="09-rd_files/figure-html/graph-run-1.svg" style="display: block; margin: auto auto auto 0;" /&gt;
+---
+## Density of running variable
+
+.hi-slate[Likely bunching] (problem)
+
+.qa[Q] Is the distribution of `\(\text{X}_{i}\)` smooth across `\(c\)`?
+
+&lt;img src="09-rd_files/figure-html/graph-bunching-1.svg" style="display: block; margin: auto auto auto 0;" /&gt;
+
+---
+## Additional points
+
+1. No bin should cross the threshold.
+2. Are there discontinuities other than `\(c\)`? Should there be? Smoothness?
+
+--
+
+Again, if these graphs are not clear and convincing, it's going to be hard to make the case that you have a true/credible discontinuity.
+
+---
+layout: false
+name: srd-appendix
+# Appendix
+## Estimation: Linear, differing slopes
+
+Definitions of terms that [magically appear](#srd-linear-diff)
+
+- `\(\widetilde{\alpha} = \color{#6A5ACD}{\alpha_0} + \color{#6A5ACD}{\beta_0}c\)`
+
+- `\(\tau = \left( \color{#e64173}{\alpha_1} - \color{#6A5ACD}{\alpha_0} \right) + \left( \color{#e64173}{\beta_1} - \color{#6A5ACD}{\beta_0} \right)c\)`
+
+- `\(\widetilde{\beta} = \left( \color{#e64173}{\beta_1} - \color{#6A5ACD}{\beta_0} \right)\)`
+
+---
+layout: false
+# Table of contents
+
+.col-left[
+#### Admin
+.smaller[
+1. [Schedule](#schedule)
+]
+
+#### General RD
+.smaller[
+1. [Setup](#rd-setup)
+1. [Framework](#rd-framework)
+1. [Examples](#rd-examples)
+1. [Sharp *vs.* fuzzy](#sharp-fuzzy)
+]
+
+#### [Graphical analysis](#graph)
+.smaller[
+1. [General](#graph-gen)
+1. [Outcomes by `\(\text{X}_{i}\)`](#graph-outcome)
+1. [Covariates by `\(\text{X}_{i}\)`](#graph-cov)
+1. [Density of `\(\text{X}_{i}\)`](#graph-run)
+]
+
+]
+
+.col-right[
+#### [Sharp RDs](#sharp)
+.smaller[
+1. [Setup](#sharp-setup)
+1. [(Semi) Formally](#sharp-formal)
+1. [Estimation](#sharp-est)
+1. [Examples](#sharp-ex)
+1. [In practice](#sharp-practice)
+1. [More estimation](#sharp-more-estimation)
+]
+
+#### [Fuzzy RDs](#fuzzy)
+.smaller[
+1. [Setup](#fuzzy-setup)
+1. [As IV](#fuzzy-iv)
+1. [Somewhat formally](#fuzzy-formal)
+]
+]
+---
+exclude: true
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

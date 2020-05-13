@@ -1,0 +1,29 @@
+
+- Talk about choosing bandwidth
+- Placebos
+- Finish: ## Estimation: Additional
+
+
+Glen's paper on heaping:
+https://pages.uoregon.edu/waddell/papers/2016_EI_Barreca-Lindo-Waddell.pdf
+
+```{r, srd-data, include = F, cache = T}
+# Load data
+load("RDReplication.rdata")
+# Change the name
+vote_df <- x %>% select(
+  state = StPOAbrv,
+  district = CngrsNum,
+  year = YearElec,
+  dem_margin = DPctPrv,
+  dem_margin_lag = DifDPPrv,
+  dem_margin_lead = DifDPNxt,
+  dem_vote = DemPct,
+  dem_vote_lag = DPctPrv,
+  dem_vote_lead = DemPct,
+  dem_win = DemWin,
+  dem_win_lag = DWinPrv,
+  dem_win_lead = DWinNxt
+)
+rm(x)
+```

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+  <head>
+    <title>Project Proposal, Step 2</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Due before midnight (11:59pm) on .bold[Wednesday, 27 May 2019]" />
+    <link href="project-002_files/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="project-002_files/remark-css-0.0.1/metropolis.css" rel="stylesheet" />
+    <link href="project-002_files/remark-css-0.0.1/metropolis-fonts.css" rel="stylesheet" />
+    <link rel="stylesheet" href="my-css.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Project Proposal, Step 2
+## EC607
+### Due <em>before</em> midnight (11:59pm) on .bold[Wednesday, 27 May 2019]
+
+---
+
+class: clear
+
+
+
+.mono.b[DUE:] Your .b[typed] proposal is due *before* 11:59pm on Wednesday, 27 May 2019 on [Canvas](https://canvas.uoregon.edu/).
+
+Your grade will depend upon your ability to clearly respond to the assignment—concepts *and* constraints.
+
+.mono.b[Assignment] Submit a project proposal that
+
+1\. Motivates and outlines your .hi[*causal* question] of interest.
+&lt;br&gt;
+2\. Explains .hi[potential sources of selection] that could lead to bias.
+&lt;br&gt;
+3\. Describes the .hi[ideal experiment] which one could use to answer this question
+&lt;br&gt;
+4\. Discusses a .hi[practical research design] through which one could answer the original question—clarifying *how* this research design avoids selection bias.
+
+.hi[Note:] Your question **must be causal in nature**. If it is not, come up with a new question.
+
+.mono.b[Sections:] Your proposal requires the following sections/components. **Separate them.**
+&lt;br&gt;After each section, state the section's word count (*e.g.*, *13 words*).
+
+.mono.b[Title:] (1 ≤ words ≤ 15)
+&lt;br&gt;A title that clearly describes your question—and potentially how you would answer it.
+
+.mono.b[Abstract:] (50 ≤ words ≤ 150)
+&lt;br&gt;A brief description of your project. Clearly describe the main question, how you will answer it, and why/for whom the results matter. Be concise and clear. You hook the reader here and elaborate later.
+
+.mono.b[Question and motivation:] (100 ≤ words ≤ 300)
+&lt;br&gt; Explain why this area of research is interesting/important in general (not just to you). Why should your reader care/keep reading? After you .b[briefly] motivate the general topic, clearly describe your specific .b[causal question]. If necessary, motivate the specific question too.
+
+.mono.b[Selection:] (100 ≤ words ≤ 300)
+&lt;br&gt; Why is this question challenging to answer empirically? In other words, what sources of selection bias concern you? If we simply run a regression of `\(y\)` on `\(X\)`, why might `\(\hat{\beta}\)` be biased?
+
+.mono.b[Ideal experiment:] (100 ≤ words ≤ 300)
+&lt;br&gt; Describe the ideal experiment that would answer your question. This *ideal* experiment does not need to be practical—*i.e.*, you do not need to be able to run it in real life.
+
+.mono.b[Practical research design:] (100 ≤ words ≤ 400)
+&lt;br&gt; How might you causally answer the your question in *real life*? Which **data** would you need? What sort of **research design** would you apply—selection on observables (regression with many controls, matching, propensity-score methods, *etc.*) or selection on observables (IV, RD, *etc.*)? How does this proposed research design **avoid selection bias**?
+
+.mono.b[Update:] Now that you've worked through these components, rewrite your abstract and title.
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"ratio": "8.5:11",
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

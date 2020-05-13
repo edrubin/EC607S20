@@ -135,13 +135,17 @@ The content of the lectures mainly follows *MHE* and [Michael Anderson](https://
 [.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/08-iv/08-iv.Rmd)
 <br>**Readings:** MHE chapter 4 + C&T sections 4.8–4.9
 
-**Lecture 09: Regression Discontinuity**
+**[Lecture 09: Regression Discontinuity](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/09-rd/09-rd.html)**
 
 1. Sharp regression discontinuities
 1. Fuzzy regression discontinuities
 1. Graphical analyses
 
-**Readings:** MHE chapter 6 + C&T sections 25.6
+**Note formats:** [.html](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/09-rd/09-rd.html) |
+[.pdf](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/09-rd/09-rd.pdf) |
+[.pdf (no pauses)](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/09-rd/09-rd-nopause.pdf) | 
+[.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/09-rd/09-rd.Rmd)
+<br>**Readings:** MHE chapter 6 + C&T sections 25.6
 
 **Lecture 10: Inference: Clustering**
 
@@ -245,11 +249,11 @@ Step 1: **Research question (causal relationship of interest) and motivation.**
 
 **Due 15 April 2020 ([Canvas](https://canvas.uoregon.edu))** 
 
-Step 2: **Short project proposal**
+[Step 2: **Project proposal**](https://raw.githack.com/edrubin/EC607S20/master/project/002/project-002.pdf)
 
-Step 3: **Longer project proposal**
+**Due 27 May 2020 ([Canvas](https://canvas.uoregon.edu))** 
 
-Step 4: **Presentation of project pitch**
+Step 3: **Presentation of project pitch**
 <br>Includes discussion from 2 peers
 
 ## Practice problems
