@@ -1,0 +1,19 @@
+Ideas
+
+1. Classic, cross-sectional IV application (Michael's problem set?)
+
+2. IV simulation
+	- heterogeneous treatment effects
+	- all groups have different mean effects (compliers, always takers, never takers)
+	- two instruments affect different subgroups of the compliers (with differing shares)
+	- estimate the LATE for each instrument and for the instruments jointly
+	- what happens if defiers respond to a third, separate instrument (z3)
+	- drop defiers from z3; add in defiers who respond to the second instrument (z2)
+
+3. Measurement error and IV
+	- classical
+	- non-classical twist: LATE and heterogeneity 
+
+4. Randomized encouragement design (Meredith's problem set?)
+
+5. Bias of IV in finite samples with more instruments. (simulation?)
