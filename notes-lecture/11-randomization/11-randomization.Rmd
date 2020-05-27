@@ -1,6 +1,6 @@
 ---
 title: "Inference and Randomization"
-subtitle: "EC 607, Set 10"
+subtitle: "EC 607, Set 11"
 author: "Edward Rubin"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
