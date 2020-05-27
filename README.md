@@ -239,7 +239,7 @@ The content of the lectures mainly follows *MHE* and [Michael Anderson](https://
 
 [**Problem set 2**](https://raw.githack.com/edrubin/EC607S20/master/problem-sets/002/002-problems.pdf)
 
-[**Problem set 3**](https://raw.githack.com/edrubin/EC607S20/master/problem-sets/003/003-problems.pdf) with [dataset 1](https://raw.githack.com/edrubin/EC607S20/master/problem-sets/002/data/2mile.dta), [dataset 2](https://raw.githack.com/edrubin/EC607S20/master/problem-sets/002/data/allcovariates.dta), [dataset 3](https://raw.githack.com/edrubin/EC607S20/master/problem-sets/002/data/allsites.dta), and [more data](https://raw.githack.com/edrubin/EC607S20/master/problem-sets/002/data/sitecovariates.dta).
+[**Problem set 3**](https://raw.githack.com/edrubin/EC607S20/master/problem-sets/003/003-problems.pdf) with [dataset 1](https://raw.githack.com/edrubin/EC607S20/master/problem-sets/003/data/2mile.dta), [dataset 2](https://raw.githack.com/edrubin/EC607S20/master/problem-sets/003/data/allcovariates.dta), [dataset 3](https://raw.githack.com/edrubin/EC607S20/master/problem-sets/003/data/allsites.dta), and [more data](https://raw.githack.com/edrubin/EC607S20/master/problem-sets/003/data/sitecovariates.dta).
 
 ## Project
 
