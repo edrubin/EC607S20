@@ -1344,7 +1344,7 @@ Most RD analyses will have some subset of three types of figures.
 
 1. .hi-slate[Density] of running/forcing variable $\left( \text{X}_{i} \right)$
 --
-<br>.it[Is there evidence of sorty into treatment (across the threshold)?]
+<br>.it[Is there evidence of sorting into treatment (across the threshold)?]
 
 ---
 name: graph-outcome
