@@ -159,14 +159,18 @@ The content of the lectures mainly follows *MHE* and [Michael Anderson](https://
 [.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/10-clustering/10-clustering.Rmd)
 <br>**Readings:** MHE chapter 8
 
-**Lecture 11: Inference: Resampling and Randomization**
+**[Lecture 11: Inference: Resampling and Randomization](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/11-randomization/11-randomization.html)**
 
 1. Resampling
 1. The bootstrap
 1. Permutation tests (Fisher)
 1. Randomization inference (Neyman-Pearson)
 
-**Readings:** MHE chapter 6 + C&T sections 25.6
+**Note formats:** [.html](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/11-randomization/11-randomization.html) |
+[.pdf](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/11-randomization/11-randomization.pdf) |
+[.pdf (no pauses)](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/11-randomization/11-randomization-nopause.pdf) | 
+[.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/11-randomization/11-randomization.Rmd)
+<br>**Readings:** MHE chapter 6 + C&T sections 25.6
 
 **Lecture 12:** There's more?
 
@@ -235,7 +239,7 @@ The content of the lectures mainly follows *MHE* and [Michael Anderson](https://
 
 2–5 problem sets combining econometric theory and R.
 
-[**Problem set 1**](https://raw.githack.com/edrubin/EC607S20/master/problem-sets/001/001-problems.pdf)
+**Problem set 1:** [problems](https://raw.githack.com/edrubin/EC607S20/master/problem-sets/001/001-problems.pdf) | [solutions](https://raw.githack.com/edrubin/EC607S20/master/problem-sets/001/001-solutions.pdf)
 
 [**Problem set 2**](https://raw.githack.com/edrubin/EC607S20/master/problem-sets/002/002-problems.pdf)
 
@@ -258,7 +262,8 @@ Step 1: **Research question (causal relationship of interest) and motivation.**
 **Due 27 May 2020 ([Canvas](https://canvas.uoregon.edu))** 
 
 Step 3: **Presentation of project pitch**
-<br>Includes discussion from 2 peers
+
+**Due 05 June 2020**, sign up on Canvas.
 
 ## Practice problems
 

@@ -265,3 +265,14 @@ hr, .title-slide h2::after, .mline h1::after {
   color: #ffffff;
   height: 1px;
 }
+
+/* Format tables */
+table {
+  color: #000000;
+  font-size: 100%;
+}
+th, td {
+  background-color: #ffffff;
+  color: #000000;
+  line-height: 0.5;
+}
