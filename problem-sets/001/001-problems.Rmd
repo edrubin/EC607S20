@@ -1,0 +1,639 @@
+---
+title: "001: CEFs, inference, simulation, *etc.*"
+subtitle: "EC 607"
+# author: "Edward Rubin"
+# date: "Due *before* midnight on Tuesday, 05 May 2020"
+date: ".it.biggest[Solutions]"
+output:
+  xaringan::moon_reader:
+    css: ['default', 'metropolis', 'metropolis-fonts', 'my-css.css']
+    # self_contained: true
+    nature:
+      ratio: '8.5:11'
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+layout: true
+class: clear
+---
+
+```{r, setup, include = F}
+# Knitr options
+library(knitr)
+opts_chunk$set(
+  comment = "#>",
+  fig.align = "center",
+  fig.height = 7,
+  fig.width = 10.5,
+  warning = F,
+  message = F
+)
+opts_chunk$set(dev = "svg")
+options(device = function(file, width, height) {
+  svg(tempfile(), width = width, height = height)
+})
+options(digits = 4)
+options(width = 100)
+```
+
+<noscript>
+
+.mono.b[DUE] Upload your answer on [Canvas](https://canvas.uoregon.edu/) *before* midnight on Tuesday 05 May 2020.
+
+.mono.b[IMPORTANT] Your submission should be a PDF that includes
+<br> .b.mono[1.] your typed responses/answers to the problems
+<br> .b.mono[2.] .mono[R] code you used to generate your answers
+
+Your answers must be in your own words (they should not be identical to anyone else's words).
+
+.mono.b[OBJECTIVE] This problem set has three purposes: (1) reinforce the metrics topics we reviewed in class; (2) build your .mono[R] toolset; (3) start building your intuition about causality within econometrics.
+
+</noscript>
+
+## Part 1/3: CEFs and regression
+
+Let's start with generating data. We want a nonlinear CEF, define our data-generating process (DGP) as 
+
+$$
+\\begin{align}
+	y_i = 3 + 
+	\mathop{\mathbb{I}} \left( x_i < 4 \right) \exp\left(x_i\right) +
+	\mathop{\mathbb{I}}\left( x_i \ge 4 \right) \left(41 + 10 log(x_i)\right) +
+	u_i
+\\end{align}
+$$
+
+where 
+
+- $\mathop{\mathbb{I}}(x)$ denotes an indicator function that takes a value of 1 whenever $x$ is true
+- $x_i$ is distributed as a **discrete** uniform random variable taking on integers in $[-15,15]$
+- $u_i$ is a heteroskedastic disturbance that follows a **continuous** uniform distribution $[-|x|,|x|]$ 
+
+Notice that this DGP is really just two separate DGPs determined by whether $x_i$ is above or below 4 (plus the disturbance $v_i$).
+
+**01.** Time to generate data. Given this is the first problem of your first problem set, I'll give you some code (for free).
+
+```{r, code01}
+# Load packages
+library(pacman)
+p_load(tidyverse, estimatr, huxtable, magrittr, here)
+# Set a seed
+set.seed(12345)
+# Set sample size to 1,000
+n = 1e3
+# Generate data
+dgp_df = tibble(
+	x = sample(x = -15:15, size = n, replace = T),
+	u = runif(n = n, min = -abs(x), max = abs(x)),
+	y = 3 + if_else(x < 4, exp(x), 41 + 10 * log(x)) + u
+)
+# Summarize the dataset
+dgp_df %>% summary()
+```
+
+Run this code.
+
+Make sure your output is pretty close to my output (and that you have a sense of what's going on).
+
+---
+
+**02.** Create a scatter plot of your dataset (*e.g.*, using [`geom_point`](https://ggplot2.tidyverse.org/reference/geom_point.html) from `ggplot2`).
+
+<!-- <noscript> -->
+
+**Answer:**
+
+```{r, answer02}
+ggplot(dgp_df, aes(x = x, y = y)) +
+geom_point(alpha = 0.3) +
+theme_minimal(base_size = 12)
+```
+
+---
+
+<!-- </noscript> -->
+
+**03.** Calculate the CEF and add it to your scatter plot. You can calculate the CEF by hand or with a function.
+
+*Hint:* You can plot a function in `ggplot2` using [`stat_function`](https://ggplot2.tidyverse.org/reference/stat_function.html).
+
+*Note:* You can plot the CEF as a continuous function even though $x$ is discrete.
+
+<!-- <noscript> -->
+
+**Answer:**
+
+```{r, answer03}
+# The CEF function
+cef = function(x) 3 + if_else(x < 4, exp(x), 41 + 10 * log(x))
+# Plot it
+ggplot(dgp_df, aes(x = x, y = y)) +
+geom_point(alpha = 0.3) +
+stat_function(fun = cef, color = "blue") +
+theme_minimal(base_size = 12)
+```
+
+<!-- </noscript> -->
+
+**04.** Regress $y$ on $x$. Report your results. 
+
+<!-- <noscript> -->
+
+**Answer:**
+	
+```{r, answer04}
+# 'Classical' standard errors
+lm_robust(y ~ x, data = dgp_df, se_type = "classical")
+```
+
+---
+
+<!-- </noscript> -->
+
+**05.** Do heteroskedasticity-robust standard errors matter here? Should they? Explain your reasoning.
+
+<!-- TODO Next year: Explain why the het.-robust standard errors are smaller. -->
+
+<!-- <noscript> -->
+
+**Answer:** As the table below illustrates, heteroskedasticity-robust standard errors *may* matter a bit here. That said, the significance level of the point estimates does not really change. More generally: We may expect heteroskedasticity to matter here due to the fact that the OLS regression residuals *relative to the CEF* **are** heteroskedastic.
+
+```{r, answer05}
+# Het-robust standard errors
+est_ols = lm_robust(y ~ x, data = dgp_df, se_type = "classical")
+est_hc2 = lm_robust(y ~ x, data = dgp_df, se_type = "HC2")
+# Table
+list("Classical" = est_ols, "Het. Robust" = est_hc2) %>% huxreg()
+```	
+
+---
+
+<!-- </noscript> -->
+
+**06.** Add your regression line to your scatter plot. You can do this in `ggplot2` using [`geom_abline()`](https://ggplot2.tidyverse.org/reference/geom_abline.html) and [`geom_smooth()`](https://ggplot2.tidyverse.org/reference/geom_smooth.html) (among other options).
+
+<!-- <noscript> -->
+	
+**Answer:**
+
+```{r, answer06}
+# The CEF function
+cef = function(x) 3 + if_else(x < 4, exp(x), 41 + 10 * log(x))
+# Plot it
+ggplot(dgp_df, aes(x = x, y = y)) +
+geom_point(alpha = 0.3) +
+stat_function(fun = cef, color = "blue") +
+geom_smooth(method = lm, se = F, color = "red") +
+theme_minimal(base_size = 12)
+```
+
+---
+
+<!-- </noscript> -->
+
+**07.** For each of our 31 values of $x$ (-15 through 15), calculate the sample mean of $y$ conditional on $x$ and the number of observations for each $x$.
+
+Now run a regression using this sample-based CEF: Regress the conditional mean of $y\mid x$ on $x$, weighting by the number of observations. Do your results from this CEF regression match your results in **04**? Should they for this sample?
+
+*Hint:* You can use the `weights` argument in `lm()` and `lm_robust()` to run a weighted regression.
+
+<!-- <noscript> -->
+	
+**Answer:**
+
+```{r, answer07}
+# Build the sample-based CEF
+cef_df = dgp_df %>% group_by(x) %>% summarize(y = mean(y), n = n())
+# Run the regression
+est_cef = lm_robust(y ~ x, data = cef_df, weights = n)
+# Table
+list("Classical" = est_ols, "Het. Robust" = est_hc2, "Aggregated" = est_cef) %>% huxreg()
+```
+
+The point estimates *do* match. The standard errors do not. These results are expected: The aggregated datasets, when weighted, produces the same OLS estimates (since the OLS estimator can be written as weighted sums of aggregated sample moments). The standard errors differ because the aggregated observations do not produce the same residuals or sample size as the micro-data.
+
+<!-- </noscript> -->
+
+**08.** Does OLS provide a decent linear approximation to the CEF in this setting? Under what conditions would this linear approximation of the CEF be helpful? Under what conditions would it be less helpful?
+
+<!-- <noscript> -->
+
+**Answer:** Maybe... OLS is doing what we asked it to do: providing a linear approximation to the conditional expectation function. In this case, the linear approximation differs quite a bit from the CEF. We might want to model this process a bit more flexibly (obviously still possible with OLS).
+
+<!-- </noscript> -->
+
+## Part 2/3: R loops and functions
+
+**09.** To make sure you are comfortable writing loops and functions (an important part of simulations): complete your new assignment on DataCamp: *Intermediate R*. 
+
+You will need to [register for DataCamp](https://www.datacamp.com/groups/shared_links/b31fbe9257b51273fd142ab04a151c124fe5e4a0ea1ee4dc3605d69a2775197f) if you have not done so already.
+
+<!-- <noscript> -->
+  
+**Answer:** On DataCamp.
+
+<!-- </noscript> -->
+
+---
+
+## Part 3/3: Inference and simulation
+
+Now it's time for a good, old-fashioned simulation.
+
+Now imagine you're working on a project, and it occurs to you that
+
+1. You have a pretty small sample size (but could spend a lot of money to get bigger $n$).
+1. It's unlikely that your disturbance is actually normally distributed.
+1. You might have an endogenous treatment $\text{D}_i$ but have a sense of how treatment comes about. 
+
+Given that the small-sample properties of OLS generally use *well-behaved disturbanced* and the large-sample properties are, by definition, for **big** $n$, you are wondering how well OLS is going to perform. Plus, you are really concerned about the endogenous treatment but optimistic that you know how the treatment is endogenous. Can we recover the *true* treatment effect?
+
+This is the perfect scenario for a simulation.
+
+I'll walk you through some of the steps of the simulation. But you have to write your own code.
+
+Let's start by defining the DGP (using notation from class)
+
+$$
+\begin{align}
+	\text{Y}_{0i} &= X_i + u_i \\[0.5em]
+	\text{Y}_{1i} &= \text{Y}_{0i} + W_i + v_i \\[0.5em]
+	\text{D}_{i} &= \mathop{\mathbb{I}} \left(X_i + \varepsilon_i > 10 \right) \\[0.5em]
+	\text{Y}_i &= \text{Y}_{0i} + \text{D}_i \tau_i
+\end{align}
+$$
+
+where
+
+- $X_i\sim$ Normal with mean 10 and standard devation 3
+- $W_i\sim$ Normal with mean 3 and standard devation 2
+- $u_i\sim$ Uniform $\in[-10,10]$
+- $v_i\sim$ Uniform $\in[-5,5]$
+- $\varepsilon_i\sim$ Uniform $\in [-1, 1]$
+
+**10.** Derive an expression for $\tau_i$ (individual $i$'s treatment effect).
+
+<!-- <noscript> -->
+  
+**Answer:** As defined in class, $\tau_i$ is equal to the difference in treated and untreated outcomes for individual $i$, *i.e.*, 
+
+$$
+\begin{align}
+  \tau_i 
+  &= \text{Y}_{1i} - \text{Y}_{0i} \\
+  &= \left(\text{Y}_{0i} + W_i + v_i\right) - \text{Y}_{0i} \\
+  &= W_i + v_i
+\end{align}
+$$
+
+<!-- </noscript> -->
+
+**11.** What assumptions does the expression for the treatment effect in **10** depend upon?
+
+<!-- <noscript> -->
+
+**Answer:** None. If you really want to name an assumption, it is that we can define the causal effect of some arbitrary treatment as the difference between $\text{Y}_{1i}$ and $\text{Y}_{0i}$. 
+
+You might also be able to say that our definition of the treatment effect assumes that individual $i$'s treatment effect does not depend upon other individuals' treatment statuses. This second assumption is the *stable unit treatment value assumption* (SUTVA), which is safe in our setting (we know the DGP).
+
+---
+
+<!-- </noscript> -->
+
+**12.** Based upon **10**, what is the average treatment effect in this population? (Your answer should be a number.)
+
+<!-- <noscript> -->
+
+**Answer:** The ATE is
+$$
+\begin{align}
+  \overline{\tau_{i}}
+  &= \mathop{E}\left[ \tau_{i} \right] \\
+  &= \mathop{E}\left[ W_i + v_i \right] \\
+  &= \mathop{E}\left[ W_i \right] + \mathop{E}\left[ v_i \right] \\
+  &= 3 + 0 \\
+  &= 3
+\end{align}
+$$
+
+<!-- </noscript> -->
+
+**13.** If we regress $\text{Y}_i$ on $\text{D}_i$ should we expect to recover the average causal effect of treatment $(\text{D}_i)$? Explain.
+
+<!-- <noscript> -->
+
+**Answer:** No. Our potential outcomes are correlated with treatment: they all depend upon $X_i$. In other words: We have selection bias, since $\mathop{E}\left[ \text{Y}_{0i} | \text{D}_i  = 1 \right] \neq \mathop{E}\left[ \text{Y}_{0i} | \text{D}_i  = 0 \right]$.
+
+<!-- </noscript> -->
+
+**14.** Would conditioning on $X$ and/or $W$ help the regression in **13**? Explain.
+
+<!-- <noscript> -->
+
+**Answer:** Yes: Because selection is entering through $X_i$, if we can control for $X_i$, we will remove the selection bias.
+
+<!-- </noscript> -->
+
+**15.** Now back to R: Write some R code that generates a 1,000-observation sample from the DGP.
+
+<!-- <noscript> -->
+
+**Answer:**
+
+```{r, answer15, eval = T}
+# Set seed
+set.seed(123)
+# Sample size
+n = 1e3
+# Generate data
+dgp_sample = tibble(
+	u = runif(n, -10, 10),
+	v = runif(n, -5, 5),
+	e = runif(n, -1, 1),
+	x = rnorm(n, mean = 10, sd = 3),
+	w = rnorm(n, mean = 3, sd = 2),
+	y0 = x + u,
+	y1 = y0 + w + v,
+	t = y1 - y0,
+	d = (x + e > 10) %>% as.numeric(),
+	# d = (x + w + e > 13) %>% as.numeric(),
+	y = y0 + d * t
+)
+```
+
+<!-- </noscript> -->
+
+**16.** For your sample, what is the correlation between $\text{Y}_{0i}$ and $\text{D}_i$? What about $\text{Y}_{1i}$ and $\text{D}_i$? What do these correlations tell you?
+
+<!-- <noscript> -->
+
+**Answer:** The correlation between $\text{Y}_{0i}$ and $\text{D}_i$ is `r cor(dgp_sample$y0, dgp_sample$d) %>% scales::comma(accuracy = 0.001)`, and correlation between $\text{Y}_{1i}$ and $\text{D}_i$ is `r cor(dgp_sample$y1, dgp_sample$d) %>% scales::comma(accuracy = 0.001)`. This correlation suggests that we have substantial selection into treatment (and thus bias from selection).
+
+```{r, answer16}
+# Correlation matrix for Y0, Y1, and D
+dgp_sample %>% select(y0, y1, d) %>% cor()
+```
+
+---
+
+<!-- </noscript> -->
+
+<!-- TODO Next year: Add questions for covariance of D conditional on X and/or W -->
+
+**17.** Using your sample, calculate the average treatment effect (ATE), the average treatment effect on the treated (TOT or ATT), and the average treatment effect for the untreated. Why do these quantities differ?
+
+<!-- <noscript> -->
+
+**Answer:** 
+
+```{r, answer17}
+# ATE
+ate = dgp_sample %>% summarize(ate = mean(y1 - y0))
+# ATET
+atet = dgp_sample %>% filter(d == 1) %>% summarize(ate_t = mean(y1 - y0))
+# ATEC
+atec = dgp_sample %>% filter(d == 0) %>% summarize(ate_c = mean(y1 - y0))
+```
+
+The sample's ATE is approximately `r as.numeric(ate) %>% scales::comma(0.001)`, the ATET is approximately `r as.numeric(atet) %>% scales::comma(0.001)`, and the ATEC is approximately `r as.numeric(atec) %>% scales::comma(0.001)`. 
+
+The average treatment effects differ across groups because (1) the treatment effect is heterogeneous, and (2) we are only observing a small sample (*i.e.*, we have sampling variation). If you allow the size of the sample to get large enough, the difference in the group's means will disappear.
+
+---
+
+<!-- </noscript> -->
+
+**18.** Run four regressions:
+
+1. Regress $\text{Y}_i$ on $\text{D}_i$
+1. Regress $\text{Y}_i$ on $\text{D}_i$ and $X_i$
+1. Regress $\text{Y}_i$ on $\text{D}_i$ and $W_i$
+1. Regress $\text{Y}_i$ on $\text{D}_i$, $X_i$, and $W_i$
+
+Do the results of these regressions match your expectation for recovering the ATE or ATT? Explain.
+
+<!-- <noscript> -->
+
+**Answer:** 
+
+```{r, answer18}
+# The four regressions
+r1 = lm_robust(y ~ d, data = dgp_sample)
+r2 = lm_robust(y ~ d + x, data = dgp_sample)
+r3 = lm_robust(y ~ d + w, data = dgp_sample)
+r4 = lm_robust(y ~ d + x + w, data = dgp_sample)
+# A table
+list(r1, r2, r3, r4) %>% huxreg()
+```
+
+The results for the regressions that do not control for $X_i$ are clearly biased, as we expected from the fact that $X_i$ is causing selection into treatment. 
+
+Conditional on $X_i$, treatment is independent of the conditional outcomes, so we should be able to recover an unbiased estimate. The regression, as we've specified, estimates the ATE. Further, because dimensions of treatment-effect heterogeneity $\left(W_i + v_i\right)$ are uncorrelated with treatment, the ATE and the ATT are equal.
+
+Finally, because regressions that include $W_i$ allow us to model the treatment-effect heterogeneity and modestly reduce residual variation (increasing precision; reducing standard errors)—but they also use up an additional degree of freedom (could matter for small-ish samples).
+
+---
+
+<!-- </noscript> -->
+
+**19.** Now wrap your code from **15** and **18** into a function. This function will be a single iteration of the simulation. The function should output the estimated treatment effect in each of the four regressions in **18**. 
+
+*Hint 1:* Help your future self by writing this function so that you can easily change the sample size.
+
+*Hint 2:* Use `tidy()` from the [`broom` package](https://github.com/tidymodels/broom) to easily convert regression results into a data frame.
+
+*Hint 3:* Label the output of the four regressions so that you can distinguish between each specification.
+
+<!-- <noscript> -->
+
+**Answer:**
+
+```{r, answer19, eval = T}
+# Function for one iteration
+one_iter = function(n) {
+	# Generate data
+	dgp_it = tibble(
+		u = runif(n, -10, 10),
+		v = runif(n, -5, 5),
+		e = runif(n, -1, 1),
+		x = rnorm(n, mean = 10, sd = 3),
+		w = rnorm(n, mean = 3, sd = 2),
+		y0 = x + u,
+		y1 = y0 + w + v,
+		t = y1 - y0,
+		d = (x + e > 10) %>% as.numeric(),
+		# d = (x + w + e > 13) %>% as.numeric(),
+		y = y0 + d * t
+	)
+	# Regression time
+	bind_rows(
+		lm(y ~ d, data = dgp_it) %>% broom::tidy() %>% filter(term == "d"),
+		lm(y ~ d + x, data = dgp_it) %>% broom::tidy() %>% filter(term == "d"),
+		lm(y ~ d + w, data = dgp_it) %>% broom::tidy() %>% filter(term == "d"),
+		lm(y ~ d + x + w, data = dgp_it) %>% broom::tidy() %>% filter(term == "d")
+	) %>% mutate(controls = c("none", "x", "w", "x + w"))
+}
+```
+
+<!-- </noscript> -->
+
+---
+
+**20.** Run a simulation with at least 500 iterations. Each iteration should
+
+- take a new **15-observation** sample from our DGP
+- output **four treatment-effect estimates** (one for each regression in **18**)
+- output **four standard errors** (one for each estimate)
+
+Summarize your results with a figure (*e.g.*, [`geom_density()`](https://ggplot2.tidyverse.org/reference/geom_density.html)) and/or a table.
+
+*Hints:* The `apply()` family (*e.g.*, `lapply()`) works well for tasks like this, as does the `map` family from the [`purrr` package](https://purrr.tidyverse.org/) (see the `future_map` family from the [`furrr` package](https://github.com/DavisVaughan/furrr) for parallelization). Also: The [notes from class](github.com/edrubin/EC607S20/).
+
+<!-- <noscript> -->
+
+**Answer:**
+
+```{r, answer20, eval = T, message = F}
+# Load 'furrr'
+p_load(furrr)
+# Run the simulation
+set.seed(1234)
+# Set up the parallelization
+plan(multiprocess, workers = 12, .progress = T)
+invisible(future_options(seed = 1234L))
+# Run the simulation
+small_df = future_map_dfr(rep(15, 5000), one_iter)
+```
+
+```{r, answer20b, eval = T}
+# Plot simulation
+ggplot(data = small_df, aes(x = estimate, fill = controls)) +
+geom_density(color = NA, alpha = 0.6) +
+geom_hline(yintercept = 0) +
+geom_vline(xintercept = 3, linetype = "dashed") +
+labs(x = "Estimate", y = "Density") +
+scale_fill_viridis_d("Controls", option = "magma", end = 0.9) +
+theme_minimal(base_size = 12) +
+theme(legend.position = "bottom")
+```
+
+---
+
+```{r, answer20c, eval = T}
+# Table of summaries
+small_df %>%
+  group_by(controls) %>%
+  summarize(
+    "Mean Coef." = mean(estimate),
+    "Median Coef." = median(estimate),
+    "Std. Dev. Coef" = sd(estimate),
+    "Rejection Rate" = mean(p.value < 0.05)
+  ) %>%
+  hux() %>% add_colnames()
+```
+
+<!-- </noscript> -->
+
+**21.** Are any of the estimation strategies (the four regressions) providing *reasonable* estimates of the average treatment effect?
+
+<!-- <noscript> -->
+
+**Answer:** As we discussed before, the methods that do not control for $X_i$ are hopelessly biased. On the other hand, the methods that control for $X_i$ are appear to be producing unbiased estimates for the ATE.
+
+<!-- </noscript> -->
+
+**22.** With 15 observations, do you think think you have enough power to *detect* a treatment effect? Explain.
+
+<!-- <noscript> -->
+
+**Answer:** Our sample size seems to be hurting us quite a bit. As the summary table above shows: For the specifications that control for $X_i$, we reject the null hypothesis about 7.5% of the time (using a 5% significance level). The null hypothesis is indeed false, so we would hope to reject the null *way* more than 7.5% of the time—ideally at least 80% of the time. We need more power.
+
+---
+
+<!-- </noscript> -->
+
+**23.** Increase the sample size to 1,000 observations per sample and repeat the simulation (including graphical/table summary). Does anything important change for causal estimates (*e.g.*, centers of the distributions) or inference (*e.g.*, rejection rates)?
+
+<!-- <noscript> -->
+
+**Answer:**
+
+```{r, answer23, eval = T, message = F}
+# Run the simulation
+set.seed(1234)
+# Set up the parallelization
+plan(multiprocess, workers = 12, .progress = T)
+invisible(future_options(seed = 1234L))
+# Run the simulation
+big_df = future_map_dfr(rep(1000, 5000), one_iter)
+```
+
+```{r, answer23b, eval = T}
+# Plot simulation
+ggplot(data = big_df, aes(x = estimate, fill = controls)) +
+geom_density(color = NA, alpha = 0.6) +
+geom_hline(yintercept = 0) +
+geom_vline(xintercept = 3, linetype = "dashed") +
+labs(x = "Estimate", y = "Density") +
+scale_fill_viridis_d("Controls", option = "magma", end = 0.9) +
+theme_minimal(base_size = 12) +
+theme(legend.position = "bottom")
+```
+
+---
+
+```{r, answer23c, eval = T}
+# Table of summaries
+big_df %>%
+  group_by(controls) %>%
+  summarize(
+    "Mean Coef." = mean(estimate),
+    "Median Coef." = median(estimate),
+    "Std. Dev. Coef" = sd(estimate),
+    "Rejection Rate" = mean(p.value < 0.05)
+  ) %>%
+  hux() %>% add_colnames()
+```
+
+Increasing the size of the sample
+
+<!-- </noscript> -->
+
+**24.** Would getting even bigger data help the regressions that appear to be biased? *Related:* Is it worth paying for a bigger sample in this setting? Explain.
+
+<!-- <noscript> -->
+
+**Answer:** No: Getting more data does not help us with the bias. The selection bias is not a function of the sample size. Bigged data do not generally get rid of biased coefficients.
+
+However, it *may* be worth paying for a bigger sample *if we can remove the selection bias*. Our rejection rates jump from 7.5% to 99.9% by increasing our sample size from 15 to 1,000. 
+
+In general: You pay for sample size to *increase precision*—not to reduce bias.
+
+<!-- </noscript> -->
+
+**25.** Should we control for $W_i$? Explain.
+
+<!-- <noscript> -->
+
+**Answer:** Controlling for $W_i$ does nothing for the selection bias. It *does* allow you to model the treatment-effect hetergeneity *and* slightly increases your precision (with this larger sample size). So it's probably worth it. That said: Our conditional-independence assumption does not require it, so it is not necessary.
+
+<!-- </noscript> -->
+
+## Bonus
+
+**B01.** Does anything important change if $\text{D}_i = \mathop{\mathbb{I}}\left(X_i + W_i + \varepsilon_i > 13 \right)$?
+
+**B02.** Repeat the simulation steps—but use a Normal distribution for $u$, $v$, and $\varepsilon$ (try to match the mean and variance). What changes (now that we're using a very well-behaved distribution)?
+
+**B03.** Repeat the simulation steps—but use a very poorly behaved distribution for $u$, $v$, and $\varepsilon$ (try to match the mean and variance, if they are defined). What changes?
+
+**B04.** When we regress $\text{Y}_i$ on $\text{D}_i$ (and potentially controls), are we estimating the ATE or the ATT?
+
+---
+exclude: true
+
+```{r, print pdf, echo = F, eval = F}
+# pagedown::chrome_print("001-problems.html")
+pagedown::chrome_print("001-problems.html", output = "001-solutions.pdf")
+```

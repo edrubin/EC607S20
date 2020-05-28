@@ -256,6 +256,16 @@
   font-family: 'Zilla Slab' !important;
 }
 
+
+/* Format tables */
+table {
+  color: #000000;
+  line-height: 1%;
+}
+th, td {
+  background-color: #ffffff;
+}
+
 /* Remove orange line */
 hr, .title-slide h2::after, .mline h1::after {
   content: '';

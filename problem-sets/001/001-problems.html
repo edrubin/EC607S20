@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+  <head>
+    <title>001: CEFs, inference, simulation, etc.</title>
+    <meta charset="utf-8" />
+    <link href="001-problems_files/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="001-problems_files/remark-css-0.0.1/metropolis.css" rel="stylesheet" />
+    <link href="001-problems_files/remark-css-0.0.1/metropolis-fonts.css" rel="stylesheet" />
+    <link rel="stylesheet" href="my-css.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# 001: CEFs, inference, simulation, <em>etc.</em>
+## EC 607
+### .it.biggest[Solutions]
+
+---
+
+layout: true
+class: clear
+---
+
+
+
+&lt;noscript&gt;
+
+.mono.b[DUE] Upload your answer on [Canvas](https://canvas.uoregon.edu/) *before* midnight on Tuesday 05 May 2020.
+
+.mono.b[IMPORTANT] Your submission should be a PDF that includes
+&lt;br&gt; .b.mono[1.] your typed responses/answers to the problems
+&lt;br&gt; .b.mono[2.] .mono[R] code you used to generate your answers
+
+Your answers must be in your own words (they should not be identical to anyone else's words).
+
+.mono.b[OBJECTIVE] This problem set has three purposes: (1) reinforce the metrics topics we reviewed in class; (2) build your .mono[R] toolset; (3) start building your intuition about causality within econometrics.
+
+&lt;/noscript&gt;
+
+## Part 1/3: CEFs and regression
+
+Let's start with generating data. We want a nonlinear CEF, define our data-generating process (DGP) as 
+
+$$
+\\begin{align}
+	y_i = 3 + 
+	\mathop{\mathbb{I}} \left( x_i &lt; 4 \right) \exp\left(x_i\right) +
+	\mathop{\mathbb{I}}\left( x_i \ge 4 \right) \left(41 + 10 log(x_i)\right) +
+	u_i
+\\end{align}
+$$
+
+where 
+
+- `\(\mathop{\mathbb{I}}(x)\)` denotes an indicator function that takes a value of 1 whenever `\(x\)` is true
+- `\(x_i\)` is distributed as a **discrete** uniform random variable taking on integers in `\([-15,15]\)`
+- `\(u_i\)` is a heteroskedastic disturbance that follows a **continuous** uniform distribution `\([-|x|,|x|]\)` 
+
+Notice that this DGP is really just two separate DGPs determined by whether `\(x_i\)` is above or below 4 (plus the disturbance `\(v_i\)`).
+
+**01.** Time to generate data. Given this is the first problem of your first problem set, I'll give you some code (for free).
+
+
+```r
+# Load packages
+library(pacman)
+p_load(tidyverse, estimatr, huxtable, magrittr, here)
+# Set a seed
+set.seed(12345)
+# Set sample size to 1,000
+n = 1e3
+# Generate data
+dgp_df = tibble(
+	x = sample(x = -15:15, size = n, replace = T),
+	u = runif(n = n, min = -abs(x), max = abs(x)),
+	y = 3 + if_else(x &lt; 4, exp(x), 41 + 10 * log(x)) + u
+)
+# Summarize the dataset
+dgp_df %&gt;% summary()
+```
+
+```
+#&gt;        x                 u                 y         
+#&gt;  Min.   :-15.000   Min.   :-14.138   Min.   :-11.14  
+#&gt;  1st Qu.: -8.000   1st Qu.: -2.718   1st Qu.:  3.15  
+#&gt;  Median : -1.000   Median :  0.000   Median :  9.53  
+#&gt;  Mean   : -0.352   Mean   :  0.361   Mean   : 28.18  
+#&gt;  3rd Qu.:  8.000   3rd Qu.:  3.579   3rd Qu.: 61.64  
+#&gt;  Max.   : 15.000   Max.   : 14.383   Max.   : 85.46
+```
+
+Run this code.
+
+Make sure your output is pretty close to my output (and that you have a sense of what's going on).
+
+---
+
+**02.** Create a scatter plot of your dataset (*e.g.*, using [`geom_point`](https://ggplot2.tidyverse.org/reference/geom_point.html) from `ggplot2`).
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:**
+
+
+```r
+ggplot(dgp_df, aes(x = x, y = y)) +
+geom_point(alpha = 0.3) +
+theme_minimal(base_size = 12)
+```
+
+&lt;img src="001-problems_files/figure-html/answer02-1.svg" style="display: block; margin: auto;" /&gt;
+
+---
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**03.** Calculate the CEF and add it to your scatter plot. You can calculate the CEF by hand or with a function.
+
+*Hint:* You can plot a function in `ggplot2` using [`stat_function`](https://ggplot2.tidyverse.org/reference/stat_function.html).
+
+*Note:* You can plot the CEF as a continuous function even though `\(x\)` is discrete.
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:**
+
+
+```r
+# The CEF function
+cef = function(x) 3 + if_else(x &lt; 4, exp(x), 41 + 10 * log(x))
+# Plot it
+ggplot(dgp_df, aes(x = x, y = y)) +
+geom_point(alpha = 0.3) +
+stat_function(fun = cef, color = "blue") +
+theme_minimal(base_size = 12)
+```
+
+&lt;img src="001-problems_files/figure-html/answer03-1.svg" style="display: block; margin: auto;" /&gt;
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**04.** Regress `\(y\)` on `\(x\)`. Report your results. 
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:**
+	
+
+```r
+# 'Classical' standard errors
+lm_robust(y ~ x, data = dgp_df, se_type = "classical")
+```
+
+```
+#&gt;             Estimate Std. Error t value   Pr(&gt;|t|) CI Lower CI Upper  DF
+#&gt; (Intercept)   29.225    0.46413   62.97  0.000e+00   28.314   30.136 998
+#&gt; x              2.957    0.05124   57.71 3.207e-320    2.856    3.057 998
+```
+
+---
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**05.** Do heteroskedasticity-robust standard errors matter here? Should they? Explain your reasoning.
+
+&lt;!-- TODO Next year: Explain why the het.-robust standard errors are smaller. --&gt;
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:** As the table below illustrates, heteroskedasticity-robust standard errors *may* matter a bit here. That said, the significance level of the point estimates does not really change. More generally: We may expect heteroskedasticity to matter here due to the fact that the OLS regression residuals *relative to the CEF* **are** heteroskedastic.
+
+
+```r
+# Het-robust standard errors
+est_ols = lm_robust(y ~ x, data = dgp_df, se_type = "classical")
+est_hc2 = lm_robust(y ~ x, data = dgp_df, se_type = "HC2")
+# Table
+list("Classical" = est_ols, "Het. Robust" = est_hc2) %&gt;% huxreg()
+```
+
+<table class="huxtable" style="border-collapse: collapse; margin-bottom: 2em; margin-top: 2em; width: 50%; margin-left: auto; margin-right: auto;  ">
+<col><col><col><tr>
+<td style="vertical-align: top; text-align: center; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.8pt 0pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;"></td>
+<td style="vertical-align: top; text-align: center; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.8pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">Classical</td>
+<td style="vertical-align: top; text-align: center; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.8pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">Het. Robust</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(Intercept)</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">29.225 ***</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">29.225 ***</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;"></td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(0.464)&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(0.462)&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">x</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">2.957 ***</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">2.957 ***</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;"></td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">(0.051)&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">(0.043)&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">N</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt; padding: 4pt 4pt 4pt 4pt;">R2</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt; padding: 4pt 4pt 4pt 4pt;">0.769&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt; padding: 4pt 4pt 4pt 4pt;">0.769&nbsp;&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td colspan="3" style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;"> *** p &lt; 0.001;  ** p &lt; 0.01;  * p &lt; 0.05.</td>
+</tr>
+</table>
+
+
+---
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**06.** Add your regression line to your scatter plot. You can do this in `ggplot2` using [`geom_abline()`](https://ggplot2.tidyverse.org/reference/geom_abline.html) and [`geom_smooth()`](https://ggplot2.tidyverse.org/reference/geom_smooth.html) (among other options).
+
+&lt;!-- &lt;noscript&gt; --&gt;
+	
+**Answer:**
+
+
+```r
+# The CEF function
+cef = function(x) 3 + if_else(x &lt; 4, exp(x), 41 + 10 * log(x))
+# Plot it
+ggplot(dgp_df, aes(x = x, y = y)) +
+geom_point(alpha = 0.3) +
+stat_function(fun = cef, color = "blue") +
+geom_smooth(method = lm, se = F, color = "red") +
+theme_minimal(base_size = 12)
+```
+
+&lt;img src="001-problems_files/figure-html/answer06-1.svg" style="display: block; margin: auto;" /&gt;
+
+---
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**07.** For each of our 31 values of `\(x\)` (-15 through 15), calculate the sample mean of `\(y\)` conditional on `\(x\)` and the number of observations for each `\(x\)`.
+
+Now run a regression using this sample-based CEF: Regress the conditional mean of `\(y\mid x\)` on `\(x\)`, weighting by the number of observations. Do your results from this CEF regression match your results in **04**? Should they for this sample?
+
+*Hint:* You can use the `weights` argument in `lm()` and `lm_robust()` to run a weighted regression.
+
+&lt;!-- &lt;noscript&gt; --&gt;
+	
+**Answer:**
+
+
+```r
+# Build the sample-based CEF
+cef_df = dgp_df %&gt;% group_by(x) %&gt;% summarize(y = mean(y), n = n())
+# Run the regression
+est_cef = lm_robust(y ~ x, data = cef_df, weights = n)
+# Table
+list("Classical" = est_ols, "Het. Robust" = est_hc2, "Aggregated" = est_cef) %&gt;% huxreg()
+```
+
+<table class="huxtable" style="border-collapse: collapse; margin-bottom: 2em; margin-top: 2em; width: 50%; margin-left: auto; margin-right: auto;  ">
+<col><col><col><col><tr>
+<td style="vertical-align: top; text-align: center; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.8pt 0pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;"></td>
+<td style="vertical-align: top; text-align: center; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.8pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">Classical</td>
+<td style="vertical-align: top; text-align: center; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.8pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">Het. Robust</td>
+<td style="vertical-align: top; text-align: center; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.8pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">Aggregated</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(Intercept)</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">29.225 ***</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">29.225 ***</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">29.225 ***</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;"></td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(0.464)&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(0.462)&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(2.497)&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">x</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">2.957 ***</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">2.957 ***</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">2.957 ***</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;"></td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">(0.051)&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">(0.043)&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">(0.224)&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">N</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">31&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt; padding: 4pt 4pt 4pt 4pt;">R2</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt; padding: 4pt 4pt 4pt 4pt;">0.769&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt; padding: 4pt 4pt 4pt 4pt;">0.769&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt; padding: 4pt 4pt 4pt 4pt;">0.791&nbsp;&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td colspan="4" style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;"> *** p &lt; 0.001;  ** p &lt; 0.01;  * p &lt; 0.05.</td>
+</tr>
+</table>
+
+
+The point estimates *do* match. The standard errors do not. These results are expected: The aggregated datasets, when weighted, produces the same OLS estimates (since the OLS estimator can be written as weighted sums of aggregated sample moments). The standard errors differ because the aggregated observations do not produce the same residuals or sample size as the micro-data.
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**08.** Does OLS provide a decent linear approximation to the CEF in this setting? Under what conditions would this linear approximation of the CEF be helpful? Under what conditions would it be less helpful?
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:** Maybe... OLS is doing what we asked it to do: providing a linear approximation to the conditional expectation function. In this case, the linear approximation differs quite a bit from the CEF. We might want to model this process a bit more flexibly (obviously still possible with OLS).
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+## Part 2/3: R loops and functions
+
+**09.** To make sure you are comfortable writing loops and functions (an important part of simulations): complete your new assignment on DataCamp: *Intermediate R*. 
+
+You will need to [register for DataCamp](https://www.datacamp.com/groups/shared_links/b31fbe9257b51273fd142ab04a151c124fe5e4a0ea1ee4dc3605d69a2775197f) if you have not done so already.
+
+&lt;!-- &lt;noscript&gt; --&gt;
+  
+**Answer:** On DataCamp.
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+---
+
+## Part 3/3: Inference and simulation
+
+Now it's time for a good, old-fashioned simulation.
+
+Now imagine you're working on a project, and it occurs to you that
+
+1. You have a pretty small sample size (but could spend a lot of money to get bigger `\(n\)`).
+1. It's unlikely that your disturbance is actually normally distributed.
+1. You might have an endogenous treatment `\(\text{D}_i\)` but have a sense of how treatment comes about. 
+
+Given that the small-sample properties of OLS generally use *well-behaved disturbanced* and the large-sample properties are, by definition, for **big** `\(n\)`, you are wondering how well OLS is going to perform. Plus, you are really concerned about the endogenous treatment but optimistic that you know how the treatment is endogenous. Can we recover the *true* treatment effect?
+
+This is the perfect scenario for a simulation.
+
+I'll walk you through some of the steps of the simulation. But you have to write your own code.
+
+Let's start by defining the DGP (using notation from class)
+
+$$
+`\begin{align}
+	\text{Y}_{0i} &amp;= X_i + u_i \\[0.5em]
+	\text{Y}_{1i} &amp;= \text{Y}_{0i} + W_i + v_i \\[0.5em]
+	\text{D}_{i} &amp;= \mathop{\mathbb{I}} \left(X_i + \varepsilon_i &gt; 10 \right) \\[0.5em]
+	\text{Y}_i &amp;= \text{Y}_{0i} + \text{D}_i \tau_i
+\end{align}`
+$$
+
+where
+
+- `\(X_i\sim\)` Normal with mean 10 and standard devation 3
+- `\(W_i\sim\)` Normal with mean 3 and standard devation 2
+- `\(u_i\sim\)` Uniform `\(\in[-10,10]\)`
+- `\(v_i\sim\)` Uniform `\(\in[-5,5]\)`
+- `\(\varepsilon_i\sim\)` Uniform `\(\in [-1, 1]\)`
+
+**10.** Derive an expression for `\(\tau_i\)` (individual `\(i\)`'s treatment effect).
+
+&lt;!-- &lt;noscript&gt; --&gt;
+  
+**Answer:** As defined in class, `\(\tau_i\)` is equal to the difference in treated and untreated outcomes for individual `\(i\)`, *i.e.*, 
+
+$$
+`\begin{align}
+  \tau_i 
+  &amp;= \text{Y}_{1i} - \text{Y}_{0i} \\
+  &amp;= \left(\text{Y}_{0i} + W_i + v_i\right) - \text{Y}_{0i} \\
+  &amp;= W_i + v_i
+\end{align}`
+$$
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**11.** What assumptions does the expression for the treatment effect in **10** depend upon?
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:** None. If you really want to name an assumption, it is that we can define the causal effect of some arbitrary treatment as the difference between `\(\text{Y}_{1i}\)` and `\(\text{Y}_{0i}\)`. 
+
+You might also be able to say that our definition of the treatment effect assumes that individual `\(i\)`'s treatment effect does not depend upon other individuals' treatment statuses. This second assumption is the *stable unit treatment value assumption* (SUTVA), which is safe in our setting (we know the DGP).
+
+---
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**12.** Based upon **10**, what is the average treatment effect in this population? (Your answer should be a number.)
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:** The ATE is
+$$
+`\begin{align}
+  \overline{\tau_{i}}
+  &amp;= \mathop{E}\left[ \tau_{i} \right] \\
+  &amp;= \mathop{E}\left[ W_i + v_i \right] \\
+  &amp;= \mathop{E}\left[ W_i \right] + \mathop{E}\left[ v_i \right] \\
+  &amp;= 3 + 0 \\
+  &amp;= 3
+\end{align}`
+$$
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**13.** If we regress `\(\text{Y}_i\)` on `\(\text{D}_i\)` should we expect to recover the average causal effect of treatment `\((\text{D}_i)\)`? Explain.
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:** No. Our potential outcomes are correlated with treatment: they all depend upon `\(X_i\)`. In other words: We have selection bias, since `\(\mathop{E}\left[ \text{Y}_{0i} | \text{D}_i  = 1 \right] \neq \mathop{E}\left[ \text{Y}_{0i} | \text{D}_i  = 0 \right]\)`.
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**14.** Would conditioning on `\(X\)` and/or `\(W\)` help the regression in **13**? Explain.
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:** Yes: Because selection is entering through `\(X_i\)`, if we can control for `\(X_i\)`, we will remove the selection bias.
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**15.** Now back to R: Write some R code that generates a 1,000-observation sample from the DGP.
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:**
+
+
+```r
+# Set seed
+set.seed(123)
+# Sample size
+n = 1e3
+# Generate data
+dgp_sample = tibble(
+	u = runif(n, -10, 10),
+	v = runif(n, -5, 5),
+	e = runif(n, -1, 1),
+	x = rnorm(n, mean = 10, sd = 3),
+	w = rnorm(n, mean = 3, sd = 2),
+	y0 = x + u,
+	y1 = y0 + w + v,
+	t = y1 - y0,
+	d = (x + e &gt; 10) %&gt;% as.numeric(),
+	# d = (x + w + e &gt; 13) %&gt;% as.numeric(),
+	y = y0 + d * t
+)
+```
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**16.** For your sample, what is the correlation between `\(\text{Y}_{0i}\)` and `\(\text{D}_i\)`? What about `\(\text{Y}_{1i}\)` and `\(\text{D}_i\)`? What do these correlations tell you?
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:** The correlation between `\(\text{Y}_{0i}\)` and `\(\text{D}_i\)` is 0.317, and correlation between `\(\text{Y}_{1i}\)` and `\(\text{D}_i\)` is 0.319. This correlation suggests that we have substantial selection into treatment (and thus bias from selection).
+
+
+```r
+# Correlation matrix for Y0, Y1, and D
+dgp_sample %&gt;% select(y0, y1, d) %&gt;% cor()
+```
+
+```
+#&gt;        y0     y1      d
+#&gt; y0 1.0000 0.8722 0.3173
+#&gt; y1 0.8722 1.0000 0.3189
+#&gt; d  0.3173 0.3189 1.0000
+```
+
+---
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+&lt;!-- TODO Next year: Add questions for covariance of D conditional on X and/or W --&gt;
+
+**17.** Using your sample, calculate the average treatment effect (ATE), the average treatment effect on the treated (TOT or ATT), and the average treatment effect for the untreated. Why do these quantities differ?
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:** 
+
+
+```r
+# ATE
+ate = dgp_sample %&gt;% summarize(ate = mean(y1 - y0))
+# ATET
+atet = dgp_sample %&gt;% filter(d == 1) %&gt;% summarize(ate_t = mean(y1 - y0))
+# ATEC
+atec = dgp_sample %&gt;% filter(d == 0) %&gt;% summarize(ate_c = mean(y1 - y0))
+```
+
+The sample's ATE is approximately 2.984, the ATET is approximately 3.237, and the ATEC is approximately 2.740. 
+
+The average treatment effects differ across groups because (1) the treatment effect is heterogeneous, and (2) we are only observing a small sample (*i.e.*, we have sampling variation). If you allow the size of the sample to get large enough, the difference in the group's means will disappear.
+
+---
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**18.** Run four regressions:
+
+1. Regress `\(\text{Y}_i\)` on `\(\text{D}_i\)`
+1. Regress `\(\text{Y}_i\)` on `\(\text{D}_i\)` and `\(X_i\)`
+1. Regress `\(\text{Y}_i\)` on `\(\text{D}_i\)` and `\(W_i\)`
+1. Regress `\(\text{Y}_i\)` on `\(\text{D}_i\)`, `\(X_i\)`, and `\(W_i\)`
+
+Do the results of these regressions match your expectation for recovering the ATE or ATT? Explain.
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:** 
+
+
+```r
+# The four regressions
+r1 = lm_robust(y ~ d, data = dgp_sample)
+r2 = lm_robust(y ~ d + x, data = dgp_sample)
+r3 = lm_robust(y ~ d + w, data = dgp_sample)
+r4 = lm_robust(y ~ d + x + w, data = dgp_sample)
+# A table
+list(r1, r2, r3, r4) %&gt;% huxreg()
+```
+
+<table class="huxtable" style="border-collapse: collapse; margin-bottom: 2em; margin-top: 2em; width: 50%; margin-left: auto; margin-right: auto;  ">
+<col><col><col><col><col><tr>
+<td style="vertical-align: top; text-align: center; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.8pt 0pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;"></td>
+<td style="vertical-align: top; text-align: center; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.8pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">(1)</td>
+<td style="vertical-align: top; text-align: center; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.8pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">(2)</td>
+<td style="vertical-align: top; text-align: center; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.8pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">(3)</td>
+<td style="vertical-align: top; text-align: center; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.8pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">(4)</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(Intercept)</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">7.965 ***</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">0.645&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">6.696 ***</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">-0.590&nbsp;&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;"></td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(0.271)&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(0.864)&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(0.403)&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(0.888)&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">d</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">7.263 ***</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">2.873 ***</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">7.197 ***</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">2.820 ***</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;"></td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(0.406)&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(0.625)&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(0.402)&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(0.620)&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">x</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">0.948 ***</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">0.945 ***</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;"></td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(0.107)&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(0.106)&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">w</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">0.434 ***</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">0.429 ***</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;"></td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">(0.098)&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">(0.094)&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">N</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt; padding: 4pt 4pt 4pt 4pt;">R2</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt; padding: 4pt 4pt 4pt 4pt;">0.243&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt; padding: 4pt 4pt 4pt 4pt;">0.299&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt; padding: 4pt 4pt 4pt 4pt;">0.257&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt; padding: 4pt 4pt 4pt 4pt;">0.313&nbsp;&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td colspan="5" style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;"> *** p &lt; 0.001;  ** p &lt; 0.01;  * p &lt; 0.05.</td>
+</tr>
+</table>
+
+
+The results for the regressions that do not control for `\(X_i\)` are clearly biased, as we expected from the fact that `\(X_i\)` is causing selection into treatment. 
+
+Conditional on `\(X_i\)`, treatment is independent of the conditional outcomes, so we should be able to recover an unbiased estimate. The regression, as we've specified, estimates the ATE. Further, because dimensions of treatment-effect heterogeneity `\(\left(W_i + v_i\right)\)` are uncorrelated with treatment, the ATE and the ATT are equal.
+
+Finally, because regressions that include `\(W_i\)` allow us to model the treatment-effect heterogeneity and modestly reduce residual variation (increasing precision; reducing standard errors)—but they also use up an additional degree of freedom (could matter for small-ish samples).
+
+---
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**19.** Now wrap your code from **15** and **18** into a function. This function will be a single iteration of the simulation. The function should output the estimated treatment effect in each of the four regressions in **18**. 
+
+*Hint 1:* Help your future self by writing this function so that you can easily change the sample size.
+
+*Hint 2:* Use `tidy()` from the [`broom` package](https://github.com/tidymodels/broom) to easily convert regression results into a data frame.
+
+*Hint 3:* Label the output of the four regressions so that you can distinguish between each specification.
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:**
+
+
+```r
+# Function for one iteration
+one_iter = function(n) {
+	# Generate data
+	dgp_it = tibble(
+		u = runif(n, -10, 10),
+		v = runif(n, -5, 5),
+		e = runif(n, -1, 1),
+		x = rnorm(n, mean = 10, sd = 3),
+		w = rnorm(n, mean = 3, sd = 2),
+		y0 = x + u,
+		y1 = y0 + w + v,
+		t = y1 - y0,
+		d = (x + e &gt; 10) %&gt;% as.numeric(),
+		# d = (x + w + e &gt; 13) %&gt;% as.numeric(),
+		y = y0 + d * t
+	)
+	# Regression time
+	bind_rows(
+		lm(y ~ d, data = dgp_it) %&gt;% broom::tidy() %&gt;% filter(term == "d"),
+		lm(y ~ d + x, data = dgp_it) %&gt;% broom::tidy() %&gt;% filter(term == "d"),
+		lm(y ~ d + w, data = dgp_it) %&gt;% broom::tidy() %&gt;% filter(term == "d"),
+		lm(y ~ d + x + w, data = dgp_it) %&gt;% broom::tidy() %&gt;% filter(term == "d")
+	) %&gt;% mutate(controls = c("none", "x", "w", "x + w"))
+}
+```
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+---
+
+**20.** Run a simulation with at least 500 iterations. Each iteration should
+
+- take a new **15-observation** sample from our DGP
+- output **four treatment-effect estimates** (one for each regression in **18**)
+- output **four standard errors** (one for each estimate)
+
+Summarize your results with a figure (*e.g.*, [`geom_density()`](https://ggplot2.tidyverse.org/reference/geom_density.html)) and/or a table.
+
+*Hints:* The `apply()` family (*e.g.*, `lapply()`) works well for tasks like this, as does the `map` family from the [`purrr` package](https://purrr.tidyverse.org/) (see the `future_map` family from the [`furrr` package](https://github.com/DavisVaughan/furrr) for parallelization). Also: The [notes from class](github.com/edrubin/EC607S20/).
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:**
+
+
+```r
+# Load 'furrr'
+p_load(furrr)
+# Run the simulation
+set.seed(1234)
+# Set up the parallelization
+plan(multiprocess, workers = 12, .progress = T)
+invisible(future_options(seed = 1234L))
+# Run the simulation
+small_df = future_map_dfr(rep(15, 5000), one_iter)
+```
+
+
+```r
+# Plot simulation
+ggplot(data = small_df, aes(x = estimate, fill = controls)) +
+geom_density(color = NA, alpha = 0.6) +
+geom_hline(yintercept = 0) +
+geom_vline(xintercept = 3, linetype = "dashed") +
+labs(x = "Estimate", y = "Density") +
+scale_fill_viridis_d("Controls", option = "magma", end = 0.9) +
+theme_minimal(base_size = 12) +
+theme(legend.position = "bottom")
+```
+
+&lt;img src="001-problems_files/figure-html/answer20b-1.svg" style="display: block; margin: auto;" /&gt;
+
+---
+
+
+```r
+# Table of summaries
+small_df %&gt;%
+  group_by(controls) %&gt;%
+  summarize(
+    "Mean Coef." = mean(estimate),
+    "Median Coef." = median(estimate),
+    "Std. Dev. Coef" = sd(estimate),
+    "Rejection Rate" = mean(p.value &lt; 0.05)
+  ) %&gt;%
+  hux() %&gt;% add_colnames()
+```
+
+<table class="huxtable" style="border-collapse: collapse; margin-bottom: 2em; margin-top: 2em; width: 50%; margin-left: auto; margin-right: auto;  ">
+<col><col><col><col><col><tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">controls</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Mean Coef.</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Median Coef.</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Std. Dev. Coef</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Rejection Rate</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">none</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">7.66</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">7.64</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">3.51</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">0.511&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">w</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">7.66</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">7.74</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">3.62</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">0.486&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">x</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">3&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">2.98</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">5.97</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">0.0766</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">x + w</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">3.03</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">3.01</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">6.13</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">0.076&nbsp;</td>
+</tr>
+</table>
+
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**21.** Are any of the estimation strategies (the four regressions) providing *reasonable* estimates of the average treatment effect?
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:** As we discussed before, the methods that do not control for `\(X_i\)` are hopelessly biased. On the other hand, the methods that control for `\(X_i\)` are appear to be producing unbiased estimates for the ATE.
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**22.** With 15 observations, do you think think you have enough power to *detect* a treatment effect? Explain.
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:** Our sample size seems to be hurting us quite a bit. As the summary table above shows: For the specifications that control for `\(X_i\)`, we reject the null hypothesis about 7.5% of the time (using a 5% significance level). The null hypothesis is indeed false, so we would hope to reject the null *way* more than 7.5% of the time—ideally at least 80% of the time. We need more power.
+
+---
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**23.** Increase the sample size to 1,000 observations per sample and repeat the simulation (including graphical/table summary). Does anything important change for causal estimates (*e.g.*, centers of the distributions) or inference (*e.g.*, rejection rates)?
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:**
+
+
+```r
+# Run the simulation
+set.seed(1234)
+# Set up the parallelization
+plan(multiprocess, workers = 12, .progress = T)
+invisible(future_options(seed = 1234L))
+# Run the simulation
+big_df = future_map_dfr(rep(1000, 5000), one_iter)
+```
+
+
+```r
+# Plot simulation
+ggplot(data = big_df, aes(x = estimate, fill = controls)) +
+geom_density(color = NA, alpha = 0.6) +
+geom_hline(yintercept = 0) +
+geom_vline(xintercept = 3, linetype = "dashed") +
+labs(x = "Estimate", y = "Density") +
+scale_fill_viridis_d("Controls", option = "magma", end = 0.9) +
+theme_minimal(base_size = 12) +
+theme(legend.position = "bottom")
+```
+
+&lt;img src="001-problems_files/figure-html/answer23b-1.svg" style="display: block; margin: auto;" /&gt;
+
+---
+
+
+```r
+# Table of summaries
+big_df %&gt;%
+  group_by(controls) %&gt;%
+  summarize(
+    "Mean Coef." = mean(estimate),
+    "Median Coef." = median(estimate),
+    "Std. Dev. Coef" = sd(estimate),
+    "Rejection Rate" = mean(p.value &lt; 0.05)
+  ) %&gt;%
+  hux() %&gt;% add_colnames()
+```
+
+<table class="huxtable" style="border-collapse: collapse; margin-bottom: 2em; margin-top: 2em; width: 50%; margin-left: auto; margin-right: auto;  ">
+<col><col><col><col><col><tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">controls</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Mean Coef.</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Median Coef.</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Std. Dev. Coef</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Rejection Rate</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">none</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">7.7</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">7.7&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">0.418</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1&nbsp;&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">w</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">7.7</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">7.7&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">0.413</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1&nbsp;&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">x</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">3&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">3.01</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">0.64&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">0.997</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">x + w</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">3&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">3&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">0.633</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">0.997</td>
+</tr>
+</table>
+
+
+Increasing the size of the sample
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**24.** Would getting even bigger data help the regressions that appear to be biased? *Related:* Is it worth paying for a bigger sample in this setting? Explain.
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:** No: Getting more data does not help us with the bias. The selection bias is not a function of the sample size. Bigged data do not generally get rid of biased coefficients.
+
+However, it *may* be worth paying for a bigger sample *if we can remove the selection bias*. Our rejection rates jump from 7.5% to 99.9% by increasing our sample size from 15 to 1,000. 
+
+In general: You pay for sample size to *increase precision*—not to reduce bias.
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+**25.** Should we control for `\(W_i\)`? Explain.
+
+&lt;!-- &lt;noscript&gt; --&gt;
+
+**Answer:** Controlling for `\(W_i\)` does nothing for the selection bias. It *does* allow you to model the treatment-effect hetergeneity *and* slightly increases your precision (with this larger sample size). So it's probably worth it. That said: Our conditional-independence assumption does not require it, so it is not necessary.
+
+&lt;!-- &lt;/noscript&gt; --&gt;
+
+## Bonus
+
+**B01.** Does anything important change if `\(\text{D}_i = \mathop{\mathbb{I}}\left(X_i + W_i + \varepsilon_i &gt; 13 \right)\)`?
+
+**B02.** Repeat the simulation steps—but use a Normal distribution for `\(u\)`, `\(v\)`, and `\(\varepsilon\)` (try to match the mean and variance). What changes (now that we're using a very well-behaved distribution)?
+
+**B03.** Repeat the simulation steps—but use a very poorly behaved distribution for `\(u\)`, `\(v\)`, and `\(\varepsilon\)` (try to match the mean and variance, if they are defined). What changes?
+
+**B04.** When we regress `\(\text{Y}_i\)` on `\(\text{D}_i\)` (and potentially controls), are we estimating the ATE or the ATT?
+
+---
+exclude: true
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"ratio": "8.5:11",
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
