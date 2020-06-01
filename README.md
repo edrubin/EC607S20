@@ -172,7 +172,20 @@ The content of the lectures mainly follows *MHE* and [Michael Anderson](https://
 [.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/11-randomization/11-randomization.Rmd)
 <br>**Readings:** MHE chapter 6 + C&T sections 25.6
 
-**Lecture 12:** There's more?
+**Lecture 12:(https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/11-randomization/12-ml.html)** Machine learning in one lecture
+
+1. Prediction basics
+1. The bias-variance tradeoff
+1. In-sample *vs.* out-of-sample performance
+1. Hold-out methods (including cross validation)
+1. Ridge regression and lasso
+
+**Note formats:** [.html](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/12-ml/12-ml.html) |
+[.pdf](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/12-ml/12-ml.pdf) |
+[.pdf (no pauses)](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/12-ml/12-ml-nopause.pdf) | 
+[.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/12-ml/12-ml.Rmd)
+<br>**Readings:** [Introduction to statistical learning](http://faculty.marshall.usc.edu/gareth-james/ISL/)
+
 
 ## Lab slides
 

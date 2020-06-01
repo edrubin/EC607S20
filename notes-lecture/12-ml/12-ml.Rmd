@@ -1,0 +1,1687 @@
+---
+title: "Machine Learning (in One Lecture)"
+subtitle: "EC 607, Set 12"
+author: "Edward Rubin"
+date: "Spring 2020"
+output:
+  xaringan::moon_reader:
+    css: ['default', 'metropolis', 'metropolis-fonts', 'my-css.css']
+    # self_contained: true
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+class: inverse, middle
+
+```{r, setup, include = F}
+# devtools::install_github("dill/emoGG")
+library(pacman)
+p_load(
+  broom, tidyverse,
+  ggplot2, ggthemes, ggforce, ggridges, cowplot, scales,
+  latex2exp, viridis, extrafont, gridExtra, plotly, ggformula,
+  kableExtra, DT, 
+  data.table, dplyr, snakecase, janitor,
+  lubridate, knitr, future, furrr, parallel,
+  MASS, estimatr, FNN, parsnip, caret, glmnet,
+  huxtable, here, magrittr
+)
+# Define pink color
+red_pink <- "#e64173"
+turquoise <- "#20B2AA"
+orange <- "#FFA500"
+red <- "#fb6107"
+blue <- "#3b3b9a"
+green <- "#8bb174"
+grey_light <- "grey70"
+grey_mid <- "grey50"
+grey_dark <- "grey20"
+purple <- "#6A5ACD"
+slate <- "#314f4f"
+# Dark slate grey: #314f4f
+# Knitr options
+opts_chunk$set(
+  comment = "#>",
+  fig.align = "center",
+  fig.height = 7,
+  fig.width = 10.5,
+  warning = F,
+  message = F
+)
+opts_chunk$set(dev = "svg")
+options(device = function(file, width, height) {
+  svg(tempfile(), width = width, height = height)
+})
+options(knitr.table.format = "html")
+theme_set(theme_gray(base_size = 20))
+```
+
+```{css, echo = F, eval = T}
+@media print {
+  .has-continuation {
+    display: block !important;
+  }
+}
+```
+
+$$
+\begin{align}
+  \def\ci{\perp\mkern-10mu\perp}
+\end{align}
+$$
+
+
+# Prologue
+
+---
+name: schedule
+
+# Schedule
+
+## Last time
+
+Resampling methods
+
+## Today
+
+A one-lecture introduction to machine-learning methods
+
+## Upcoming
+
+The end is near. As is the final.
+---
+class: inverse, middle
+# Prediction: What's the goal?
+---
+layout: true
+# Prediction: What's the goal?
+
+---
+name: different
+##  What's different?
+
+Machine-learning methods focus on .hi-purple[prediction]. What's different?
+
+--
+
+Up to this point, we've focused on causal .hi[identification/inference] of $\beta$, _i.e._,
+
+$$\color{#6A5ACD}{\text{Y}_{i}} = \text{X}_{i} \color{#e64173}{\beta} + u_i$$
+
+meaning we want an unbiased (consistent) and precise estimate $\color{#e64173}{\hat\beta}$.
+
+--
+
+With .hi-purple[prediction], we shift our focus to accurately estimating outcomes.
+
+In other words, how can we best construct $\color{#6A5ACD}{\hat{\text{Y}}_{i}}$?
+
+---
+## ... so?
+
+So we want "nice"-performing estimates $\hat y$ instead of $\hat\beta$.
+
+.qa[Q] Can't we just use the same methods (_i.e._, OLS)?
+
+--
+
+.qa[A] It depends.
+--
+ How well does your .hi[linear]-regression model approximate the underlying data? (And how do you plan to select your model?)
+
+--
+
+.note[Recall] Least-squares regression is a great .hi[linear] estimator.
+
+---
+layout: false
+class: clear, middle
+
+Data data be tricky.super[.pink[†]]—as can understanding many relationships.
+
+.footnote[
+.pink[†] "Tricky" might mean nonlinear... or many other things...
+]
+
+
+---
+layout: true
+class: clear
+---
+exclude: true
+
+```{r, data prediction types, include = F, cache = T}
+# Generate data
+n = 1e3
+set.seed(123)
+tmp_df = tibble(
+  x = runif(n = n, min = -10, max = 10),
+  er = rnorm(n = n, sd = 70),
+  y = 0.3* x^2 + sqrt(abs(er)) - 17
+) %>% mutate(y = ifelse(y > 0, y, 5 - x + 0.03 * er)) %>% mutate(y = abs(y)^0.7)
+# Estimate
+knn_df = tibble(
+  x = seq(-10, 10, by = 0.1),
+  y = knn.reg(
+    train = tmp_df[,"x"] %>% as.matrix(),
+    test = tibble(x = seq(-10, 10, by = 0.1)),
+    y = tmp_df[,"y"] %>% as.matrix(),
+    k = 100
+  )$pred
+)
+knn_c_df = tibble(
+  x = seq(-10, 10, by = 0.1),
+  y = knn.reg(
+    train = tmp_df[,"x"] %>% as.matrix(),
+    test = tibble(x = seq(-10, 10, by = 0.1)),
+    y = tmp_df[,"y"] %>% as.matrix(),
+    k = 10
+  )$pred
+)
+# Random forest
+rf_model = rand_forest(mode = "regression", mtry = 1, trees = 10000) %>%
+  set_engine("ranger", seed = 12345, num.threads = 10) %>%
+  fit_xy(y = tmp_df[,"y"], x = tmp_df[,"x"])
+# Predict onto testing data
+rf_df = tibble(
+  y = predict(rf_model, new_data = tibble(x = seq(-10, 10, by = 0.1)))$.pred,
+  x = seq(-10, 10, by = 0.1)
+)
+# The plot
+gg_basic =
+ggplot(data = tmp_df, aes(x, y)) +
+geom_hline(yintercept = 0) +
+geom_vline(xintercept = 0) +
+geom_point(size = 3.5, shape = 19, alpha = 0.05) +
+geom_point(size = 3.5, shape = 1, alpha = 0.2) +
+theme_void(base_family = "Fira Sans Book") +
+xlab("Y") + ylab("X") +
+theme(
+  axis.title.y.left = element_text(size = 18, hjust = 1, vjust = 0),
+  axis.title.x.bottom = element_text(size = 18, hjust = 0.5, vjust = 0.5, angle = 0)
+)
+```
+---
+name: graph-example
+
+.white[blah]
+```{r, plot points, echo = F}
+gg_basic
+```
+---
+.pink[Linear regression]
+```{r, plot ols, echo = F}
+gg_basic +
+geom_smooth(method = "lm", se = F, color = red_pink, size = 1.25)
+```
+---
+.pink[Linear regression], .turquoise[linear regression] $\color{#20B2AA}{\left( x^4 \right)}$
+```{r, plot ols poly, echo = F}
+gg_basic +
+geom_smooth(method = "lm", se = F, color = red_pink, size = 1.25) +
+geom_smooth(method = "lm", formula = y ~ poly(x, 4), se = F, color = turquoise, size = 1.25)
+```
+---
+.pink[Linear regression], .turquoise[linear regression] $\color{#20B2AA}{\left( x^4 \right)}$, .purple[KNN (100)]
+```{r, plot knn, echo = F}
+gg_basic +
+geom_smooth(method = "lm", se = F, color = red_pink, size = 1.25) +
+geom_smooth(method = "lm", formula = y ~ poly(x, 4), se = F, color = turquoise, size = 1.25) +
+geom_path(data = knn_df, color = purple, size = 1.25)
+```
+---
+.pink[Linear regression], .turquoise[linear regression] $\color{#20B2AA}{\left( x^4 \right)}$, .purple[KNN (100)], .orange[KNN (10)]
+```{r, plot knn more, echo = F}
+gg_basic +
+geom_smooth(method = "lm", se = F, color = red_pink, size = 1.25) +
+geom_smooth(method = "lm", formula = y ~ poly(x, 4), se = F, color = turquoise, size = 1.25) +
+geom_path(data = knn_df, color = purple, size = 1.25) +
+geom_path(data = knn_c_df, color = orange, size = 1.25)
+```
+---
+.pink[Linear regression], .turquoise[linear regression] $\color{#20B2AA}{\left( x^4 \right)}$, .purple[KNN (100)], .orange[KNN (10)], .slate[random forest]
+```{r, plot rf, echo = F}
+gg_basic +
+geom_smooth(method = "lm", se = F, color = red_pink, size = 1.25) +
+geom_smooth(method = "lm", formula = y ~ poly(x, 4), se = F, color = turquoise, size = 1.25) +
+geom_path(data = knn_df, color = purple, size = 1.25) +
+geom_path(data = knn_c_df, color = orange, size = 1.25) +
+geom_path(data = rf_df, color = slate, size = 1.25)
+```
+---
+class: clear, middle
+
+.note[Note] That example only had one predictor...
+
+---
+layout: false
+name: tradeoffs
+# What's the goal?
+## Tradeoffs
+
+In prediction, we constantly face many tradeoffs, _e.g._,
+- .hi[flexibility] and .hi-slate[parametric structure] (and interpretability)
+- performance in .hi[training] and .hi-slate[test] samples
+- .hi[variance] and .hi-slate[bias]
+
+--
+
+As your economic training should have predicted, in each setting, we need to .b[balance the additional benefits and costs] of adjusting these tradeoffs.
+
+--
+
+Many machine-learning (ML) techniques/algorithms are crafted to optimize with these tradeoffs, but the practitioner (you) still needs to be careful.
+---
+name: more-goals
+# What's the goal?
+
+There are many  reasons to step outside the world of linear regression...
+
+--
+
+.hi-slate[Multi-class] classification problems
+- Rather than {0,1}, we need to classify $y_i$ into 1 of K classes
+- _E.g._, ER patients: {heart attack, drug overdose, stroke, nothing}
+
+--
+
+.hi-slate[Text analysis] and .hi-slate[image recognition]
+- Comb though sentences (pixels) to glean insights from relationships
+- _E.g._, detect sentiments in tweets or roof-top solar in satellite imagery
+
+--
+
+.hi-slate[Unsupervised learning]
+- You don't know groupings, but you think there are relevant groups
+- _E.g._, classify spatial data into groups
+---
+layout: true
+class: clear, middle
+
+---
+name: example-articles
+```{r, xray image, echo = F, out.width = '90%'}
+knitr::include_graphics("images/ml-xray.png")
+```
+---
+```{r, cars image, echo = F, out.width = '90%'}
+knitr::include_graphics("images/ml-cars.png")
+```
+---
+```{r, ny image, echo = F, out.width = '90%'}
+knitr::include_graphics("images/ml-writing.png")
+```
+---
+```{r, gender-race image, echo = F, out.width = '90%'}
+knitr::include_graphics("images/ml-issues.jpeg")
+```
+---
+layout: false
+class: clear, middle
+
+Flexibility is huge, but we still want to avoid overfitting.
+
+---
+layout: true
+# Statistical learning
+
+---
+name: sl-classes
+## What is it good for?
+
+--
+
+A lot of things.
+--
+ We tend to break statistical-learning into two(-ish) classes:
+
+1. .hi-slate[Supervised learning] builds ("learns") a statistical model for predicting an .hi-orange[output] $\left( \color{#FFA500}{\mathbf{y}} \right)$ given a set of .hi-purple[inputs] $\left( \color{#6A5ACD}{\mathbf{x}_{1},\, \ldots,\, \mathbf{x}_{p}} \right)$,
+--
+ _i.e._, we want to build a model/function $\color{#20B2AA}{f}$
+$$\color{#FFA500}{\mathbf{y}} = \color{#20B2AA}{f}\!\left( \color{#6A5ACD}{\mathbf{x}_{1},\, \ldots,\, \mathbf{x}_{p}} \right)$$
+that accurately describes $\color{#FFA500}{\mathbf{y}}$ given some values of $\color{#6A5ACD}{\mathbf{x}_{1},\, \ldots,\, x_{p}}$.
+
+--
+
+2. .hi-slate[Unsupervised learning] learns relationships and structure using only .hi-purple[inputs] $\left( \color{#6A5ACD}{x_{1},\, \ldots,\, x_{p}} \right)$ without any *supervising* output
+--
+—letting the data "speak for itself."
+
+---
+layout: false
+class: clear, middle
+
+.hi-slate[Semi-supervised learning] falls somewhere between these supervised and unsupervised learning—generally applied to supervised tasks when labeled .hi-orange[outputs] are incomplete.
+---
+class: clear, middle
+
+```{r, comic, echo = F}
+knitr::include_graphics("images/comic-learning.jpg")
+```
+
+.it[.smaller[[Source](https://twitter.com/athena_schools/status/1063013435779223553)]]
+
+---
+layout: true
+# Statistical learning
+
+---
+## Output
+
+We tend to further break .hi-slate[supervised learning] into two groups, based upon the .hi-orange[output] (the .orange[outcome] we want to predict):
+
+--
+
+1. .hi-slate[Classification tasks] for which the values of $\color{#FFA500}{\mathbf{y}}$ are discrete categories
+<br>*E.g.*, race, sex, loan default, hazard, disease, flight status
+
+2. .hi-slate[Regression tasks] in which $\color{#FFA500}{\mathbf{y}}$ takes on continuous, numeric values.
+<br>*E.g.*, price, arrival time, number of emails, temperature
+
+.note[Note.sub[1]] The use of .it[regression] differs from our use of .it[linear regression].
+
+--
+
+.note[Note.sub[2]] Don't get tricked: Not all numbers represent continuous, numerical values—_e.g._, zip codes, industry codes, social security numbers..super[.pink[†]]
+
+.footnote[
+.pink[†] .qa[Q] Where would you put responses to 5-item Likert scales?
+]
+
+---
+name: sl-goal
+## The goal
+
+As defined before, we want to *learn* a model to understand our data.
+
+--
+
+1. Take our (numeric) .orange[output] $\color{#FFA500}{\mathbf{y}}$.
+2. Imagine there is a .turquoise[function] $\color{#20B2AA}{f}$ that takes .purple[inputs] $\color{#6A5ACD}{\mathbf{X}} = \color{#6A5ACD}{\mathbf{x}_1}, \ldots, \color{#6A5ACD}{\mathbf{x}_p}$ <br>and maps them, plus a random, mean-zero .pink[error term] $\color{#e64173}{\varepsilon}$, to the .orange[output].
+$$\color{#FFA500}{\mathbf{y}} = \color{#20B2AA}{f} \! \left( \color{#6A5ACD}{\mathbf{X}} \right) + \color{#e64173}{\varepsilon}$$
+
+---
+
+## Learning from $\hat{f}$
+
+There are two main reasons we want to learn about $\color{#20B2AA}{f}$
+
+1. .hi-slate[*Causal* inference settings] How do changes in $\color{#6A5ACD}{\mathbf{X}}$ affect $\color{#FFA500}{\mathbf{y}}$?
+<br> .grey-light[What we've done all quarter.]
+
+--
+
+1. .hi-slate[Prediction problems] Predict $\color{#FFA500}{\mathbf{y}}$ using our estimated $\color{#20B2AA}{f}$, _i.e._,
+$$\hat{\color{#FFA500}{\mathbf{y}}} = \hat{\color{#20B2AA}{f}}\!(\color{#6A5ACD}{\mathbf{X}})$$
+our *black-box setting* where we care less about $\color{#20B2AA}{f}$ than $\hat{\color{#FFA500}{\mathbf{y}}}$..super[.pink[†]]
+
+.footnote[
+.pink[†] You shouldn't actually treat your prediction methods as total black boxes.
+]
+
+--
+
+Similarly, in causal-inference settings, we don't particulary care about $\hat{\color{#FFA500}{\mathbf{y}}}$.
+
+---
+
+name: sl-prediction
+## Prediction errors
+
+As tends to be the case in life, you will make errors in predicting $\color{#FFA500}{\mathbf{y}}$.
+
+The accuracy of $\hat{\color{#FFA500}{\mathbf{y}}}$ depends upon .hi-slate[two errors]:
+
+--
+
+1. .hi-slate[Reducible error] The error due to $\hat{\color{#20B2AA}{f}}$ imperfectly estimating $\color{#20B2AA}{f}$.
+<br>*Reducible* in the sense that we could improve $\hat{\color{#20B2AA}{f}}$.
+
+--
+
+1. .hi-slate[Irreducible error] The error component that is outside of the model $\color{#20B2AA}{f}$.
+<br>*Irreducible* because we defined an error term $\color{#e64173}{\varepsilon}$ unexplained by $\color{#20B2AA}{f}$.
+
+--
+
+.note[Note] As its name implies, you can't get rid of .it[irreducible] error—but we can try to get rid of .it[reducible] errors.
+
+---
+## Prediction errors
+
+Why we're stuck with .it[irreducible] error
+
+$$
+\begin{aligned}
+  \mathop{E}\left[ \left\{ \color{#FFA500}{\mathbf{y}} - \hat{\color{#FFA500}{\mathbf{y}}} \right\}^2 \right]
+  &=
+  \mathop{E}\left[ \left\{ \color{#20B2AA}{f}(\color{#6A5ACD}{\mathbf{X}}) + \color{#e64173}{\varepsilon} + \hat{\color{#20B2AA}{f}}(\color{#6A5ACD}{\mathbf{X}}) \right\}^2 \right] \\
+  &= \underbrace{\left[ \color{#20B2AA}{f}(\color{#6A5ACD}{\mathbf{X}}) - \hat{\color{#20B2AA}{f}}(\color{#6A5ACD}{\mathbf{X}}) \right]^2}_{\text{Reducible}} + \underbrace{\mathop{\text{Var}} \left( \color{#e64173}{\varepsilon} \right)}_{\text{Irreducible}}
+\end{aligned}
+$$
+
+In less math:
+
+- If $\color{#e64173}{\varepsilon}$ exists, then $\color{#6A5ACD}{\mathbf{X}}$ cannot perfectly explain $\color{#FFA500}{\mathbf{y}}$.
+- So even if $\hat{\color{#20B2AA}{f}} = \color{#20B2AA}{f}$, we still have irreducible error.
+
+--
+
+Thus, to form our .hi-slate[best predictors], we will .hi-slate[minimize reducible error].
+
+---
+layout: true
+# Model accuracy
+
+---
+name: mse
+## MSE
+
+.attn[Mean squared error (MSE)] is the most common.super[.pink[†]] way to measure model performance in a regression setting.
+
+.footnote[
+.pink[†] *Most common* does not mean best—it just means lots of people use it.
+]
+
+$$\text{MSE} = \dfrac{1}{n} \sum_{i=1}^n \left[ \color{#FFA500}{y}_i - \hat{\color{#20B2AA}{f}}(\color{#6A5ACD}{x}_i) \right]^2$$
+
+.note[Recall:]  $\color{#FFA500}{y}_i - \hat{\color{#20B2AA}{f}}(\color{#6A5ACD}{x}_i) = \color{#FFA500}{y}_i - \hat{\color{#FFA500}{y}}_i$ is our prediction error.
+
+--
+
+Two notes about MSE
+
+1. MSE will be (relatively) very small when .hi-slate[prediction error] is nearly zero.
+1. MSE .hi-slate[penalizes] big errors more than little errors (the squared part).
+---
+name: training-testing
+
+## Training or testing?
+
+Low MSE (accurate performance) on the data that trained the model isn't actually impressive—maybe the model is just overfitting our data..super[.pink[†]]
+
+.footnote[
+.pink[†] Recall the kNN performance for k=1.
+]
+
+.note[What we want:] How well does the model perform .hi-slate[on data it has never seen]?
+
+--
+
+This introduces an important distinction:
+
+1. .hi-slate[Training data]: The observations $(\color{#FFA500}{y}_i,\color{#e64173}{x}_i)$ used to .hi-slate[train] our model $\hat{\color{#20B2AA}{f}}$.
+1. .hi-slate[Testing data]: The observations $(\color{#FFA500}{y}_0,\color{#e64173}{x}_0)$ that our model has yet to see—and which we can use to evaluate the performance of $\hat{\color{#20B2AA}{f}}$.
+
+--
+
+.hi-slate[Real goal: Low test-sample MSE] (not the training MSE from before).
+
+---
+## Regression and loss
+
+For .b[regression settings], the loss is our .pink[prediction]'s distance from .orange[truth], _i.e._,
+$$
+\begin{align}
+  \text{error}_i = \color{#FFA500}{y_i} - \color{#e64173}{\hat{y}_i} && \text{loss}_i = \big| \color{#FFA500}{y_i} - \color{#e64173}{\hat{y}_i} \big| = \big| \text{error}_i \big|
+\end{align}
+$$
+Depending upon our ultimate goal, we choose .b[loss/objective functions].
+$$
+\begin{align}
+  \text{L1 loss} = \sum_i \big| \color{#FFA500}{y_i} - \color{#e64173}{\hat{y}_i} \big| &&&& \text{MAE} = \dfrac{1}{n}\sum_i \big| \color{#FFA500}{y_i} - \color{#e64173}{\hat{y}_i} \big| \\
+  \text{L2 loss} = \sum_i \left( \color{#FFA500}{y_i} - \color{#e64173}{\hat{y}_i} \right)^2 &&&& \text{MSE} = \dfrac{1}{n}\sum_i \left( \color{#FFA500}{y_i} - \color{#e64173}{\hat{y}_i} \right)^2 \\
+\end{align}
+$$
+Whatever we're using, we care about .hi[test performance] (_e.g._, test MSE), rather than training performance.
+---
+## Classification
+
+For .b[classification problems], we often use the .hi[test error rate].
+$$
+\begin{align}
+  \dfrac{1}{n} \sum_{i=1}^{n} \mathop{\mathbb{I}}\left( \color{#FFA500}{y_i} \neq \color{#e64173}{\hat{y}_i} \right)
+\end{align}
+$$
+The .b[Bayes classifier]
+
+1. predicts class $\color{#e64173}{j}$ when $\mathop{\text{Pr}}\left(\color{#FFA500}{y_0} = \color{#e64173}{j} \big | \color{#6A5ACD}{\mathbf{X}} = \mathbf{x}_0 \right)$ exceeds all other classes.
+
+2. produces the .b[Bayes decision boundary]—the decision boundary with the lowest test error rate.
+
+3. is unknown: we must predict $\mathop{\text{Pr}}\left(\color{#FFA500}{y_0} = \color{#e64173}{j} \big | \color{#6A5ACD}{\mathbf{X}} = \mathbf{x}_0 \right)$.
+
+---
+layout: true
+# Flexibility
+
+---
+
+name: bias-variance
+## The bias-variance tradeoff
+
+Finding the optimal level of flexibility highlights the .hi-pink[bias]-.hi-purple[variance] .b[tradeoff].
+
+.hi-pink[Bias] The error that comes from inaccurately estimating $\color{#20B2AA}{f}$.
+- More flexible models are better equipped to recover complex relationships $\left( \color{#20B2AA}{f} \right)$, reducing bias. (Real life is seldom linear.)
+- Simpler (less flexible) models typically increase bias.
+
+.hi-purple[Variance] The amount $\hat{\color{#20B2AA}{f}}$ would change with a different .hi-slate[training sample]
+- If new .hi-slate[training sets] drastically change $\hat{\color{#20B2AA}{f}}$, then we have a lot of uncertainty about $\color{#20B2AA}{f}$ (and, in general, $\hat{\color{#20B2AA}{f}} \not\approx \color{#20B2AA}{f}$).
+- More flexible models generally add variance to $\color{#20B2AA}{f}$.
+
+---
+## The bias-variance tradeoff
+
+The expected value.super[.pink[†]] of the .hi-pink[test MSE] can be written
+$$
+\begin{align}
+  \mathop{E}\left[ \left(\color{#FFA500}{\mathbf{y_0}} - \mathop{\hat{\color{#20B2AA}{f}}}\left(\color{#6A5ACD}{\mathbf{X}_0}\right) \right)^2 \right] =
+  \underbrace{\mathop{\text{Var}} \left( \mathop{\hat{\color{#20B2AA}{f}}}\left(\color{#6A5ACD}{\mathbf{X}_0}\right) \right)}_{\text{Variance}} +
+  \underbrace{\left[ \text{Bias}\left( \mathop{\hat{\color{#20B2AA}{f}}}\left(\color{#6A5ACD}{\mathbf{X}_0}\right) \right) \right]^2}_{\text{Bias}} +
+  \underbrace{\mathop{\text{Var}} \left( \varepsilon \right)}_{\text{Irr. error}}
+\end{align}
+$$
+
+.b[The tradeoff] in terms of model flexibility
+
+- Increasing flexibility .it[from total inflexibility] generally .b[reduces bias more] than it increases variance (reducing test MSE).
+
+- At some point, the marginal benefits of flexibility .b[equal] marginal costs.
+
+- Past this point (optimal flexibility), we .b[increase variance more] than we reduce bias (increasing test MSE).
+
+---
+layout: false
+class: clear, middle
+
+.hi[U-shaped test MSE] with respect to model flexibility (KNN here).
+<br>Increases in variance eventually overcome reductions in (squared) bias.
+
+```{r, review-bias-variance, echo = F, fig.height = 6}
+# Load data (from lecture 002)
+flex_df = here("other-files", "flex-sim.rds") %>% readRDS()
+# Find minima
+min_train = flex_df %>% filter(mse_type == "train") %>% filter(mse_value == min(mse_value))
+min_test = flex_df %>% filter(mse_type == "test") %>% filter(mse_value == min(mse_value))
+# Plot
+ggplot(data = flex_df, aes(x = 1.5 - s, y = mse_value, color = mse_type)) +
+geom_segment(
+  data = bind_rows(min_train, min_test),
+  aes(x = 1.5 - s, xend = 1.5 - s, y = 0, yend = mse_value),
+  color = "grey80",
+  size = 0.3,
+  linetype = "longdash"
+) +
+geom_hline(yintercept = 0) +
+geom_vline(xintercept = 0) +
+geom_line(size = 1.2) +
+geom_point(data = bind_rows(min_train, min_test), size = 3.5) +
+xlab("Model flexibility") +
+ylab("MSE") +
+scale_color_viridis_d(
+  "", labels = c("Test MSE", "Train MSE"),
+  option = "magma", begin = 0.2, end = 0.9
+) +
+theme_void(base_family = "Fira Sans Book") +
+theme(
+  legend.position = c(0.9, 0.65),
+  axis.title = element_text(size = 20, vjust = 1),
+  axis.title.y = element_text(angle = 90),
+  legend.text = element_text(size = 18)
+)
+```
+---
+layout: false
+
+# Resampling refresher
+
+.hi[Resampling methods] help understand uncertainty in statistical modeling.
+
+The process behind the magic of resampling methods:
+1. .b[Repeatedly draw samples] from the .b[training data].
+1. .b[Fit your model](s) on each random sample.
+1. .b[Compare] model performance (or estimates) .b[across samples].
+1. Infer the .b[variability/uncertainty in your model] from (3).
+
+---
+name: resampling-holdout
+# Resampling 
+## Hold out
+
+.note[Recall:] We want to find the model that .b[minimizes out-of-sample test error].
+
+If we have a large test dataset, we can use it (once).
+
+.qa[Q.sub[1]] What if we don't have a test set?
+<br>
+.qa[Q.sub[2]] What if we need to select and train a model?
+<br>
+.qa[Q.sub[3]] How can we avoid overfitting our training.super[.pink[†]] data during model selection?
+
+.footnote[
+.normal[.pink[†]] Also relevant for .it[testing] data.
+]
+
+--
+
+.qa[A.sub[1,2,3]] .b[Hold-out methods] (_e.g._, cross validation) use training data to estimate test performance—.b[holding out] a mini "test" sample of the training data that we use to estimate the test error.
+---
+name: resampling-validation
+layout: true
+# Hold-out methods
+## Option 1: The .it[validation set] approach
+
+To estimate the .hi-pink[test error], we can .it[hold out] a subset of our .hi-purple[training data] and then .hi-slate[validate] (evaluate) our model on this held out .hi-slate[validation set].
+
+- The .hi-slate[validation error rate] estimates the .hi-pink[test error rate]
+- The model only "sees" the non-validation subset of the .hi-purple[training data].
+
+---
+
+```{r, data-validation-set, include = F, cache = T}
+# Generate data
+X = 40
+Y = 12
+set.seed(12345)
+v_df = expand_grid(
+  x = 1:X,
+  y = 1:Y
+) %>% mutate(grp = sample(
+  x = c("Train", "Validate"),
+  size = X * Y,
+  replace = T,
+  prob = c(0.7, 0.3)
+)) %>% mutate(
+  grp2 = c(
+    rep("Validate", sum(grp == "Validate")),
+    rep("Train", sum(grp == "Train"))
+  )
+)
+```
+
+---
+
+```{r, plot-validation-set, echo = F, dependson = "data-validation-set", fig.height = 3, cache = T}
+ggplot(data = v_df, aes(x, y, fill = grp, color = grp)) +
+geom_point(shape = 21, size = 4.5, stroke = 0.5, color = purple, fill = "white") +
+theme_void() +
+theme(legend.position = "none")
+```
+
+.col-left[.hi-purple[Initial training set]]
+
+
+---
+
+```{r, plot-validation-set-2, echo = F, dependson = "data-validation-set", fig.height = 3, cache = T}
+ggplot(data = v_df, aes(x, y, fill = grp, color = grp)) +
+geom_point(shape = 21, size = 4.5, stroke = 0.5) +
+scale_fill_manual("", values = c("white", slate)) +
+scale_color_manual("", values = c(purple, slate)) +
+theme_void() +
+theme(legend.position = "none")
+```
+
+.col-left[.hi-slate[Validation (sub)set]]
+.col-right[.hi-purple[Training set:] .purple[Model training]]
+
+---
+
+```{r, plot-validation-set-3, echo = F, dependson = "data-validation-set", fig.height = 3, cache = T}
+ggplot(data = v_df, aes(x, y, fill = grp2, color = grp2)) +
+geom_point(shape = 21, size = 4.5, stroke = 0.5) +
+scale_fill_manual("", values = c("white", slate)) +
+scale_color_manual("", values = c(purple, slate)) +
+theme_void() +
+theme(legend.position = "none")
+```
+
+.col-left[.hi-slate[Validation (sub)set]]
+.col-right[.hi-purple[Training set:] .purple[Model training]]
+
+---
+layout: true
+# Hold-out methods
+## Option 1: The .it[validation set] approach
+
+---
+.ex[Example] We could use the validation-set approach to help select the degree of a polynomial for a linear-regression model.
+
+--
+
+The goal of the validation set is to .hi-pink[.it[estimate] out-of-sample (test) error.]
+
+.qa[Q] So what?
+
+--
+
+- Estimates come with .b[uncertainty]—varying from sample to sample.
+
+- Variability (standard errors) is larger with .b[smaller samples].
+
+.qa[Problem] This estimated error is often based upon a fairly small sample (<30% of our training data). So its variance can be large.
+---
+exclude: true
+
+```{r, sim-validation, include = F, cache = T}
+# Generate population and sample
+N = 1e5
+set.seed(12345)
+pop_dt = data.table(
+  x1 = runif(N, min = -1, max = 1),
+  x2 = runif(N, min = -1, max = 1),
+  x3 = runif(N, min = -1, max = 1),
+  er = rnorm(N, sd = 3)
+)
+pop_dt %<>% mutate(
+  y = 3 + 5 * x1 - 4 * x2 + 3 * x1 * x2 * x3 + x3 - 2 * x3^2 + 0.1 * x3^3 + er
+)
+# Grab our sample
+sample_dt = pop_dt[1:1e3,]
+# For 10 seeds, grab validation set and estimate flexibility
+vset_dt = mclapply(
+  X = 1:10,
+  mc.cores = 8,
+  FUN = function(i) {
+    # Set seed
+    set.seed(i)
+    # Grab validation set
+    v_i = sample.int(1e3, size = 500, replace = F)
+    vset_i = sample_dt[v_i,]
+    tset_i = sample_dt[setdiff(1:1e3, v_i),]
+    # Train models for y~x3 and grab their validation MSEs
+    mse_i = lapply(
+      X = 1:10,
+      FUN = function(p) {
+        # Train the model
+        model_ip = lm(y ~ poly(x3, p, raw = T), data = tset_i)
+        # Predict
+        mean((vset_i$y - predict(model_ip, newdata = vset_i, se.fit = F))^2)
+      }
+    ) %>% unlist()
+    # Create dataset
+    data.table(iter = i, degree = 1:10, mse = mse_i)
+  }
+) %>% rbindlist()
+# Repeat using full training model to train and full population to test
+mse_true = lapply(
+  X = 1:10,
+  FUN = function(p) {
+    # Train the model
+    model_p = lm(y ~ poly(x3, p, raw = T), data = sample_dt)
+    # Predict
+    mean((pop_dt[-(1:1e3),]$y - predict(model_p, newdata = pop_dt[-(1:1e3),], se.fit = F))^2)
+  }
+) %>% unlist()
+true_dt = data.table(degree = 1:10, mse = mse_true, iter = 1)
+```
+
+
+---
+name: validation-simulation
+layout: false
+class: clear, middle
+
+.b[Validation MSE] for 10 different validation samples
+```{r, plot-vset-sim, echo = F, dependson = "sim-validation", cache = T}
+ggplot(data = vset_dt, aes(x = degree, y = mse, color = iter, group = iter)) +
+geom_line() +
+geom_point(shape = 1) +
+scale_x_continuous("Polynomial degree of x", breaks = seq(2, 10, 2)) +
+ylab("Validation-set MSE") +
+theme_minimal(base_size = 18, base_family = "Fira Sans Book") +
+scale_color_viridis_c(option = "magma", begin = 0.3, end = 0.9) +
+theme(legend.position = "none")
+```
+---
+layout: false
+class: clear, middle
+
+.b[True test MSE] compared to validation-set estimates
+```{r, plot-vset-sim-2, echo = F, dependson = "sim-validation", cache = T}
+ggplot(data = vset_dt, aes(x = degree, y = mse, color = iter, group = iter)) +
+geom_line() +
+geom_point(shape = 1) +
+geom_line(data = true_dt, aes(x = degree, y = mse), color = "black", size = 1) +
+geom_point(data = true_dt, aes(x = degree, y = mse), color = "black", size = 3) +
+scale_x_continuous("Polynomial degree of x", breaks = seq(2, 10, 2)) +
+ylab("MSE") +
+theme_minimal(base_size = 18, base_family = "Fira Sans Book") +
+scale_color_viridis_c(option = "magma", begin = 0.3, end = 0.9) +
+theme(legend.position = "none")
+```
+
+---
+# Hold-out methods
+## Option 1: The .it[validation set] approach
+
+Put differently: The validation-set approach has (≥) two major drawbacks:
+
+1. .hi[High variability] Which observations are included in the validation set can greatly affect the validation MSE.
+
+2. .hi[Inefficiency in training our model] We're essentially throwing away the validation data when training the model—"wasting" observations.
+
+--
+
+(2) ⟹ validation MSE may overestimate test MSE.
+
+Even if the validation-set approach provides an unbiased estimator for test error, it is likely a pretty noisy estimator.
+---
+layout: true
+# Hold-out methods
+## Option 2: Leave-one-out cross validation
+
+---
+name: resampling-loocv
+
+.hi[Cross validation] solves the validation-set method's main problems.
+- Use more (= all) of the data for training (lower variability; less bias).
+- Still maintains separation between training and validation subsets.
+
+--
+
+.hi[Leave-one-out cross validation] (LOOCV) is perhaps the cross-validation method most similar to the validation-set approach.
+- Your validation set is exactly one observation.
+- .note[New] You repeat the validation exercise for every observation.
+- .note[New] Estimate MSE as the mean across all observations.
+
+---
+layout: true
+# Hold-out methods
+## Option 2: Leave-one-out cross validation
+
+Each observation takes a turn as the .hi-slate[validation set],
+<br>while the other n-1 observations get to .hi-purple[train the model].
+<br>
+<br>
+
+---
+exclude: true
+
+```{r, data-loocv, include = F, cache = T}
+# Generate data
+X = 40
+Y = 12
+loocv_df = expand_grid(
+  x = 1:X,
+  y = -(1:Y)
+) %>% mutate(
+  i = 1:(X * Y),
+  grp_1 = if_else(i == 1, "Validate", "Train"),
+  grp_2 = if_else(i == 2, "Validate", "Train"),
+  grp_3 = if_else(i == 3, "Validate", "Train"),
+  grp_4 = if_else(i == 4, "Validate", "Train"),
+  grp_5 = if_else(i == 5, "Validate", "Train"),
+  grp_n = if_else(i == X*Y, "Validate", "Train")
+)
+```
+
+---
+```{r, plot-loocv-1, echo = F, fig.height = 3, dependson = "data-loocv", cache = T}
+ggplot(data = loocv_df, aes(x, y, fill = grp_1, color = grp_1)) +
+geom_point(shape = 21, size = 4.5, stroke = 0.5) +
+scale_fill_manual("", values = c("white", slate)) +
+scale_color_manual("", values = c(purple, slate)) +
+theme_void() +
+theme(legend.position = "none")
+```
+
+.slate[Observation 1's turn for validation produces MSE.sub[1]].
+---
+```{r, plot-loocv-2, echo = F, fig.height = 3, dependson = "data-loocv", cache = T}
+ggplot(data = loocv_df, aes(x, y, fill = grp_2, color = grp_2)) +
+geom_point(shape = 21, size = 4.5, stroke = 0.5) +
+scale_fill_manual("", values = c("white", slate)) +
+scale_color_manual("", values = c(purple, slate)) +
+theme_void() +
+theme(legend.position = "none")
+```
+
+.slate[Observation 2's turn for validation produces MSE.sub[2]].
+---
+```{r, plot-loocv-3, echo = F, fig.height = 3, dependson = "data-loocv", cache = T}
+ggplot(data = loocv_df, aes(x, y, fill = grp_3, color = grp_3)) +
+geom_point(shape = 21, size = 4.5, stroke = 0.5) +
+scale_fill_manual("", values = c("white", slate)) +
+scale_color_manual("", values = c(purple, slate)) +
+theme_void() +
+theme(legend.position = "none")
+```
+
+.slate[Observation 3's turn for validation produces MSE.sub[3]].
+---
+```{r, plot-loocv-4, echo = F, fig.height = 3, dependson = "data-loocv", cache = T}
+ggplot(data = loocv_df, aes(x, y, fill = grp_4, color = grp_4)) +
+geom_point(shape = 21, size = 4.5, stroke = 0.5) +
+scale_fill_manual("", values = c("white", slate)) +
+scale_color_manual("", values = c(purple, slate)) +
+theme_void() +
+theme(legend.position = "none")
+```
+
+.slate[Observation 4's turn for validation produces MSE.sub[4]].
+---
+```{r, plot-loocv-5, echo = F, fig.height = 3, dependson = "data-loocv", cache = T}
+ggplot(data = loocv_df, aes(x, y, fill = grp_5, color = grp_5)) +
+geom_point(shape = 21, size = 4.5, stroke = 0.5) +
+scale_fill_manual("", values = c("white", slate)) +
+scale_color_manual("", values = c(purple, slate)) +
+theme_void() +
+theme(legend.position = "none")
+```
+
+.slate[Observation 5's turn for validation produces MSE.sub[5]].
+---
+```{r, plot-loocv-n, echo = F, fig.height = 3, dependson = "data-loocv", cache = T}
+# The final observation
+ggplot(data = loocv_df, aes(x, y, fill = grp_n, color = grp_n)) +
+geom_point(shape = 21, size = 4.5, stroke = 0.5) +
+scale_fill_manual("", values = c("white", slate)) +
+scale_color_manual("", values = c(purple, slate)) +
+theme_void() +
+theme(legend.position = "none")
+```
+
+.slate[Observation n's turn for validation produces MSE.sub[n]].
+---
+layout: true
+# Hold-out methods
+## Option 2: Leave-one-out cross validation
+
+---
+Because .hi-pink[LOOCV uses n-1 observations] to train the model,.super[.pink[†]] MSE.sub[i] (validation MSE from observation i) is approximately unbiased for test MSE.
+
+.footnote[
+.pink[†] And because often n-1 ≈ n.
+]
+
+.qa[Problem] MSE.sub[i] is a terribly noisy estimator for test MSE (albeit ≈unbiased).
+--
+<br>.qa[Solution] Take the mean!
+$$
+\begin{align}
+  \text{CV}_{(n)} = \dfrac{1}{n} \sum_{i=1}^{n} \text{MSE}_i
+\end{align}
+$$
+--
+
+1. LOOCV .b[reduces bias] by using n-1 (almost all) observations for training.
+2. LOOCV .b[resolves variance]: it makes all possible comparison<br>(no dependence upon which validation-test split you make).
+
+---
+exclude: true
+
+```{r, mse-loocv, include = F, cache = T, dependson = "sim-validation"}
+# Calculate LOOCV MSE for each p
+mse_loocv = lapply(
+  X = 1:10,
+  FUN = function(p) {
+    # Train the model
+    model_p = lm(y ~ poly(x3, p, raw = T), data = sample_dt)
+    # Leverage
+    h_p = hatvalues(model_p)
+    # y and predictions
+    y_p = sample_dt$y
+    y_hat_p = model_p$fitted.values
+    # MSE
+    data.table(
+      degree = p,
+      mse = 1 / nrow(sample_dt) * sum(((y_p - y_hat_p) / (1 - h_p))^2),
+      iter = 1
+    )
+  }
+) %>% rbindlist()
+```
+---
+name: ex-loocv
+layout: false
+class: clear, middle
+
+.b[True test MSE] and .hi-orange[LOOCV MSE] compared to .hi-purple[validation-set estimates]
+```{r, plot-loocv-mse, echo = F, dependson = "mse-loocv", cache = T}
+ggplot(data = vset_dt, aes(x = degree, y = mse, group = iter)) +
+geom_line(alpha = 0.35, color = purple) +
+geom_point(alpha = 0.35, color = purple, shape = 1) +
+geom_line(data = true_dt, aes(x = degree, y = mse), color = "black", size = 1) +
+geom_point(data = true_dt, aes(x = degree, y = mse), color = "black", size = 3) +
+geom_line(data = mse_loocv, aes(x = degree, y = mse), color = orange, size = 1) +
+geom_point(data = mse_loocv, aes(x = degree, y = mse), color = orange, size = 3) +
+scale_x_continuous("Polynomial degree of x", breaks = seq(2, 10, 2)) +
+ylab("MSE") +
+theme_minimal(base_size = 18, base_family = "Fira Sans Book") +
+scale_color_viridis_c(option = "magma", begin = 0.3, end = 0.9) +
+theme(legend.position = "none")
+```
+---
+layout: true
+# Hold-out methods
+## Option 3: k-fold cross validation
+
+---
+name: resampling-kcv
+
+Leave-one-out cross validation is a special case of a broader strategy:
+<br>.hi[k-fold cross validation].
+
+1. .b[Divide] the training data into $k$ equally sized groups (folds).
+2. .b[Iterate] over the $k$ folds, treating each as a validation set once<br>(training the model on the other $k-1$ folds).
+3. .b[Average] the folds' MSEs to estimate test MSE.
+
+--
+
+Benefits?
+--
+
+1. .b[Less computationally demanding] (fit model $k=$ 5 or 10 times; not $n$).
+--
+
+2. .b[Greater accuracy] (in general) due to bias-variance tradeoff!
+--
+
+  - Somewhat higher bias, relative to LOOCV: $n-1$ *vs.* $(k-1)/k$.
+--
+
+  - Lower variance due to high-degree of correlation in LOOCV MSE.sub[i].
+--
+🤯
+---
+exclude: true
+
+```{r, data-cv, include = F, cache = T}
+# Generate data
+X = 40
+Y = 12
+set.seed(12345)
+cv_df = expand_grid(
+  x = 1:X,
+  y = 1:Y
+) %>% mutate(
+  id = 1:(X*Y),
+  grp = sample(X * Y) %% 5 + 1
+)
+# Find groups
+a = seq(1, X*Y, by = X*Y/5)
+b = c(a[-1] - 1, X*Y)
+```
+
+---
+layout: true
+# Hold-out methods
+## Option 3: k-fold cross validation
+
+With $k$-fold cross validation, we estimate test MSE as
+$$
+\begin{align}
+  \text{CV}_{(k)} = \dfrac{1}{k} \sum_{i=1}^{k} \text{MSE}_{i}
+\end{align}
+$$
+---
+
+```{r, plot-cvk-0a, echo = F, fig.height = 3, dependson = "data-cv"}
+ggplot(data = cv_df, aes(x, y, color = grp)) +
+geom_point(size = 4.5) +
+scale_color_viridis_c(option = "magma", end = 0.925) +
+theme_void() +
+theme(legend.position = "none")
+```
+
+Our $k=$ 5 folds.
+---
+
+```{r, plot-cvk-0b, echo = F, fig.height = 3, dependson = "data-cv"}
+ggplot(data = cv_df, aes(x, y, color = grp == 1, fill = grp == 1)) +
+geom_point(shape = 21, size = 4.5, stroke = 0.5) +
+scale_fill_manual("", values = c("white", slate)) +
+scale_color_manual("", values = c(purple, slate)) +
+theme_void() +
+theme(legend.position = "none")
+```
+
+Each fold takes a turn at .hi-slate[validation]. The other $k-1$ folds .hi-purple[train].
+---
+
+```{r, plot-cvk-1, echo = F, fig.height = 3, dependson = "data-cv"}
+ggplot(
+  data = cv_df,
+  aes(x, y, color = between(id, a[1], b[1]), fill = between(id, a[1], b[1]))
+) +
+geom_point(shape = 21, size = 4.5, stroke = 0.5) +
+scale_fill_manual("", values = c("white", slate)) +
+scale_color_manual("", values = c(purple, slate)) +
+theme_void() +
+theme(legend.position = "none")
+```
+
+For $k=5$, fold number $1$ as the .hi-slate[validation set] produces MSE.sub[k=1].
+---
+
+```{r, plot-cvk-2, echo = F, fig.height = 3, dependson = "data-cv"}
+ggplot(
+  data = cv_df,
+  aes(x, y, color = between(id, a[2], b[2]), fill = between(id, a[2], b[2]))
+) +
+geom_point(shape = 21, size = 4.5, stroke = 0.5) +
+scale_fill_manual("", values = c("white", slate)) +
+scale_color_manual("", values = c(purple, slate)) +
+theme_void() +
+theme(legend.position = "none")
+```
+
+For $k=5$, fold number $2$ as the .hi-slate[validation set] produces MSE.sub[k=2].
+---
+
+```{r, plot-cvk-3, echo = F, fig.height = 3, dependson = "data-cv"}
+ggplot(
+  data = cv_df,
+  aes(x, y, color = between(id, a[3], b[3]), fill = between(id, a[3], b[3]))
+) +
+geom_point(shape = 21, size = 4.5, stroke = 0.5) +
+scale_fill_manual("", values = c("white", slate)) +
+scale_color_manual("", values = c(purple, slate)) +
+theme_void() +
+theme(legend.position = "none")
+```
+
+For $k=5$, fold number $3$ as the .hi-slate[validation set] produces MSE.sub[k=3].
+---
+
+```{r, plot-cvk-4, echo = F, fig.height = 3, dependson = "data-cv"}
+ggplot(
+  data = cv_df,
+  aes(x, y, color = between(id, a[4], b[4]), fill = between(id, a[4], b[4]))
+) +
+geom_point(shape = 21, size = 4.5, stroke = 0.5) +
+scale_fill_manual("", values = c("white", slate)) +
+scale_color_manual("", values = c(purple, slate)) +
+theme_void() +
+theme(legend.position = "none")
+```
+
+For $k=5$, fold number $4$ as the .hi-slate[validation set] produces MSE.sub[k=4].
+---
+
+```{r, plot-cvk-5, echo = F, fig.height = 3, dependson = "data-cv"}
+ggplot(
+  data = cv_df,
+  aes(x, y, color = between(id, a[5], b[5]), fill = between(id, a[5], b[5]))
+) +
+geom_point(shape = 21, size = 4.5, stroke = 0.5) +
+scale_fill_manual("", values = c("white", slate)) +
+scale_color_manual("", values = c(purple, slate)) +
+theme_void() +
+theme(legend.position = "none")
+```
+
+For $k=5$, fold number $5$ as the .hi-slate[validation set] produces MSE.sub[k=5].
+---
+exclue: true
+
+```{r, sim-cvk, include = F, cache = T, dependson = "sim-validation"}
+# 5-fold cross validation, 20 times
+cv_sim = mclapply(X = 1:20, mc.cores = 12, FUN = function(s) {
+  set.seed(s)
+  # Assign folds for CV
+  sample_cv = copy(sample_dt) %T>% setDT()
+  sample_cv[, fold := sample(1:.N) %% 5 + 1]
+  # Iterate over polynomial degrees
+  mse_s = lapply(X = 1:10, function(p) {
+    # Iterate over folds
+    lapply(X = 1:5, FUN = function(k) {
+      # Train the model
+      model_spk = lm(y ~ poly(x3, p, raw = T), data = sample_cv[fold != k])
+      # Predict
+      mean(
+        (sample_cv[fold == k,y] - predict(
+          model_spk,
+          newdata = sample_cv[fold == k],
+          se.fit = F
+        )
+      )^2)
+    }) %>% unlist() %>% mean()
+  }) %>% unlist()
+  data.table(degree = 1:10, mse = mse_s, iter = s)
+}) %>% rbindlist()
+```
+---
+name: ex-cv-sim
+layout: false
+class: clear, middle
+
+.b[Test MSE] .it[vs.] estimates: .orange[LOOCV], .pink[5-fold CV] (20x), and .purple[validation set] (10x)
+```{r, plot-cv-mse, echo = F, dependson = c("sim-validation", "mse-loocv", "sim-cvk"), cache = T}
+ggplot(data = vset_dt, aes(x = degree, y = mse, group = iter)) +
+geom_line(alpha = 0.5, color = purple) +
+geom_point(alpha = 0.5, color = purple, shape = 1) +
+geom_line(data = true_dt, aes(x = degree, y = mse), color = "black", size = 1) +
+geom_point(data = true_dt, aes(x = degree, y = mse), color = "black", size = 3) +
+geom_line(data = cv_sim, aes(x = degree, y = mse, group = iter), color = red_pink, size = 1) +
+geom_point(data = cv_sim, aes(x = degree, y = mse, group = iter), color = red_pink, size = 3) +
+geom_line(data = mse_loocv, aes(x = degree, y = mse), color = orange, size = 1) +
+geom_point(data = mse_loocv, aes(x = degree, y = mse), color = orange, size = 3) +
+scale_x_continuous("Polynomial degree of x", breaks = seq(2, 10, 2)) +
+ylab("MSE") +
+theme_minimal(base_size = 18, base_family = "Fira Sans Book") +
+scale_color_viridis_c(option = "magma", begin = 0.3, end = 0.9) +
+theme(legend.position = "none")
+```
+---
+layout: false
+class: clear, middle
+
+.note[Note:] Each of these methods extends to classification settings, _e.g._, LOOCV
+$$
+\begin{align}
+   \text{CV}_{(n)} = \dfrac{1}{n} \sum_{i=1}^{n} \mathop{\mathbb{I}}\left( \color{#FFA500}{y_i} \neq \color{#FFA500}{\hat{y}_i} \right)
+\end{align}
+$$
+---
+name: holdout-caveats
+layout: false
+# Hold-out methods
+## Caveat
+
+So far, we've treated each observation as separate/independent from each other observation.
+
+The methods that we've defined so far actually need this independence.
+
+---
+# Hold-out methods
+## Goals and alternatives
+
+You can use CV for either of two important .b[modeling tasks:]
+
+- .hi-purple[Model selection] Choosing and tuning a model
+
+- .hi-purple[Model assessment] Evaluating a model's accuracy
+
+--
+
+
+.note[Alternative approach:] .attn[Shrinkage methods]
+- fit a model that contains .pink[all] $\color{#e64173}{p}$ .pink[predictors]
+- simultaneously: .pink[shrink.super[.pink[†]] coefficients] toward zero
+
+.footnote[
+.pink[†] Synonyms for .it[shrink]: constrain or regularize
+]
+
+--
+
+.note[Idea:] Penalize the model for coefficients as they move away from zero.
+
+---
+name: shrinkage-why
+# Shrinkage
+## Why?
+
+.qa[Q] How could shrinking coefficients twoard zero help or predictions?
+
+--
+
+.qa[A] Remember we're generally facing a tradeoff between bias and variance.
+
+--
+
+- Shrinking our coefficients toward zero .hi[reduces the model's variance]..super[.pink[†]]
+- .hi[Penalizing] our model for .hi[larger coefficients] shrinks them toward zero.
+- The .hi[optimal penalty] will balance reduced variance with increased bias.
+
+.footnote[
+.pink[†] Imagine the extreme case: a model whose coefficients are all zeros has no variance.
+]
+
+--
+
+Now you understand shrinkage methods.
+- .attn[Ridge regression]
+- .attn[Lasso]
+- .attn[Elasticnet]
+
+---
+layout: true
+# Ridge regression
+
+---
+class: inverse, middle
+
+---
+name: ridge
+## Back to least squares (again)
+
+.note[Recall] Least-squares regression gets $\hat{\beta}_j$'s by minimizing RSS, _i.e._,
+$$
+\begin{align}
+  \min_{\hat{\beta}} \text{RSS} = \min_{\hat{\beta}} \sum_{i=1}^{n} e_i^2 = \min_{\hat{\beta}} \sum_{i=1}^{n} \bigg( \color{#FFA500}{y_i} - \color{#6A5ACD}{\underbrace{\left[ \hat{\beta}_0 + \hat{\beta}_1 x_{i,1} + \cdots + \hat{\beta}_p x_{i,p} \right]}_{=\hat{y}_i}} \bigg)^2
+\end{align}
+$$
+
+--
+
+.attn[Ridge regression] makes a small change
+- .pink[adds a shrinkage penalty] = the sum of squared coefficents $\left( \color{#e64173}{\lambda\sum_{j}\beta_j^2} \right)$
+- .pink[minimizes] the (weighted) sum of .pink[RSS and the shrinkage penalty]
+
+--
+
+$$
+\begin{align}
+  \min_{\hat{\beta}^R} \sum_{i=1}^{n} \bigg( \color{#FFA500}{y_i} - \color{#6A5ACD}{\hat{y}_i} \bigg)^2 + \color{#e64173}{\lambda \sum_{j=1}^{p} \beta_j^2}
+\end{align}
+$$
+
+---
+name: ridge-penalization
+
+.col-left[
+.hi[Ridge regression]
+$$
+\begin{align}
+\min_{\hat{\beta}^R} \sum_{i=1}^{n} \bigg( \color{#FFA500}{y_i} - \color{#6A5ACD}{\hat{y}_i} \bigg)^2 + \color{#e64173}{\lambda \sum_{j=1}^{p} \beta_j^2}
+\end{align}
+$$
+]
+
+.col-right[
+.b[Least squares]
+$$
+\begin{align}
+\min_{\hat{\beta}} \sum_{i=1}^{n} \bigg( \color{#FFA500}{y_i} - \color{#6A5ACD}{\hat{y}_i} \bigg)^2
+\end{align}
+$$
+]
+
+<br><br><br><br>
+
+$\color{#e64173}{\lambda}\enspace (\geq0)$ is a tuning parameter for the harshness of the penalty.
+<br>
+$\color{#e64173}{\lambda} = 0$ implies no penalty: we are back to least squares.
+--
+<br>
+Each value of $\color{#e64173}{\lambda}$ produces a new set of coefficents.
+
+--
+
+Ridge's approach to the bias-variance tradeoff: Balance
+- reducing .b[RSS], _i.e._, $\sum_i\left( \color{#FFA500}{y_i} - \color{#6A5ACD}{\hat{y}_i} \right)^2$
+- reducing .b[coefficients] .grey-light[(ignoring the intercept)]
+
+$\color{#e64173}{\lambda}$ determines how much ridge "cares about" these two quantities..super[.pink[†]]
+
+.footnote[
+.pink[†] With $\lambda=0$, least-squares regression only "cares about" RSS.
+]
+
+---
+## $\lambda$ and penalization
+
+Choosing a .it[good] value for $\lambda$ is key.
+- If $\lambda$ is too small, then our model is essentially back to OLS.
+- If $\lambda$ is too large, then we shrink all of our coefficients too close to zero.
+
+--
+
+.qa[Q] So what do we do?
+--
+<br>
+.qa[A] Cross validate!
+
+.grey-light[(You saw that coming, right?)]
+
+---
+## Penalization and standardization
+
+.attn[Important] Predictors' .hi[units] can drastically .hi[affect ridge regression results].
+
+.b[Why?]
+--
+ Because $\mathbf{x}_j$'s units affect $\beta_j$, and ridge is very sensitive to $\beta_j$.
+
+--
+
+.ex[Example] Let $x_1$ denote distance.
+
+.b[Least-squares regression]
+<br>
+If $x_1$ is .it[meters] and $\beta_1 = 3$, then when $x_1$ is .it[km], $\beta_1 = 3,000$.
+<br>
+The scale/units of predictors do not affect least squares' estimates.
+
+--
+
+.hi[Ridge regression] pays a much larger penalty for $\beta_1=3,000$ than $\beta_1=3$.
+<br>You will not get the same (scaled) estimates when you change units.
+
+
+--
+
+.note[Solution] Standardize your variables, _i.e._, `x_stnd = (x - mean(x))/sd(x)`.
+
+---
+layout: true
+# Lasso
+
+---
+class: inverse, middle
+---
+name: lasso
+## Intro
+
+.attn[Lasso] simply replaces ridge's .it[squared] coefficients with absolute values.
+
+--
+
+.hi[Ridge regression]
+$$
+\begin{align}
+\min_{\hat{\beta}^R} \sum_{i=1}^{n} \big( \color{#FFA500}{y_i} - \color{#6A5ACD}{\hat{y}_i} \big)^2 + \color{#e64173}{\lambda \sum_{j=1}^{p} \beta_j^2}
+\end{align}
+$$
+
+.hi-grey[Lasso]
+$$
+\begin{align}
+\min_{\hat{\beta}^L} \sum_{i=1}^{n} \big( \color{#FFA500}{y_i} - \color{#6A5ACD}{\hat{y}_i} \big)^2 + \color{#8AA19E}{\lambda \sum_{j=1}^{p} \big|\beta_j\big|}
+\end{align}
+$$
+
+Everything else will be the same—except one aspect...
+
+---
+name: lasso-shrinkage
+## Shrinkage
+
+Unlike ridge, lasso's penalty does not increase with the size of $\beta_j$.
+
+You always pay $\color{#8AA19E}{\lambda}$ to increase $\big|\beta_j\big|$ by one unit.
+
+--
+
+The only way to avoid lasso's penalty is to .hi[set coefficents to zero].
+
+--
+
+This feature has two .hi-slate[benefits]
+1. Some coefficients will be .hi[set to zero]—we get "sparse" models.
+1. Lasso can be used for subset/feature .hi[selection].
+
+--
+
+We will still need to carefully select $\color{#8AA19E}{\lambda}$.
+---
+exclude: true
+
+```{r, credit-data-work, include = F, cache = T}
+# The Credit dataset
+credit_dt = ISLR::Credit %>% clean_names() %T>% setDT()
+# Clean variables
+credit_dt[, `:=`(
+  i_female = 1 * (gender == "Female"),
+  i_student = 1 * (student == "Yes"),
+  i_married = 1 * (married == "Yes"),
+  i_asian_american = 1 * (ethnicity == "Asian"),
+  i_african_american = 1 * (ethnicity == "African American")
+)]
+# Drop unwanted variables
+credit_dt[, `:=`(id = NULL, gender = NULL, student = NULL, married = NULL, ethnicity = NULL)]
+```
+
+```{r, credit-data-preprocess, cache = T}
+# Standardize all variables except 'balan ce'
+credit_stnd = preProcess(
+  # Do not process the outcome 'balance'
+  x = credit_dt %>% dplyr::select(-balance),
+  # Standardizing means 'center' and 'scale'
+  method = c("center", "scale")
+)
+# We have to pass the 'preProcess' object to 'predict' to get new data
+credit_stnd %<>% predict(newdata = credit_dt)
+```
+
+```{r, setup-ridge, include = F}
+# Define our range of lambdas (glmnet wants decreasing range)
+lambdas = 10^seq(from = 5, to = -2, length = 100)
+# Fit ridge regression
+est_ridge = glmnet(
+  x = credit_stnd %>% dplyr::select(-balance) %>% as.matrix(),
+  y = credit_stnd$balance,
+  standardize = T,
+  alpha = 0,
+  lambda = lambdas
+)
+```
+
+```{r, cv-lasso, cache = T}
+# Define our lambdas
+lambdas = 10^seq(from = 5, to = -2, length = 100)
+# Cross validation
+lasso_cv = cv.glmnet(
+  x = credit_stnd %>% dplyr::select(-balance) %>% as.matrix(),
+  y = credit_stnd$balance,
+  alpha = 1,
+  standardize = T,
+  lambda = lambdas,
+  # New: How we make decisions and number of folds
+  type.measure = "mse",
+  nfolds = 5
+)
+```
+
+---
+layout: false
+class: clear, middle
+
+.b[Ridge regression coefficents] for $\lambda$ between 0.01 and 100,000
+```{r, plot-ridge-glmnet-2, echo = F}
+ridge_df = est_ridge %>% coef() %>% t() %>% as.matrix() %>% as.data.frame()
+ridge_df %<>% dplyr::select(-1) %>% mutate(lambda = est_ridge$lambda)
+ridge_df %<>% gather(key = "variable", value = "coefficient", -lambda)
+ggplot(
+  data = ridge_df,
+  aes(x = lambda, y = coefficient, color = variable)
+) +
+geom_line() +
+scale_x_continuous(
+  expression(lambda),
+  labels = c("0.1", "10", "1,000", "100,000"),
+  breaks = c(0.1, 10, 1000, 100000),
+  trans = "log10"
+) +
+scale_y_continuous("Ridge coefficient") +
+scale_color_viridis_d("Predictor", option = "magma", end = 0.9) +
+theme_minimal(base_size = 20, base_family = "Fira Sans Book") +
+theme(legend.position = "bottom")
+```
+---
+layout: false
+class: clear, middle
+
+```{r, ex-lasso-glmnet, include = F}
+# Define our range of lambdas (glmnet wants decreasing range)
+lambdas = 10^seq(from = 5, to = -2, length = 100)
+# Fit ridge regression
+est_lasso = glmnet(
+  x = credit_stnd %>% dplyr::select(-balance) %>% as.matrix(),
+  y = credit_stnd$balance,
+  standardize = T,
+  alpha = 1,
+  lambda = lambdas
+)
+```
+
+.b[Lasso coefficents] for $\lambda$ between 0.01 and 100,000
+```{r, plot-lasso-glmnet, echo = F}
+lasso_df = est_lasso %>% coef() %>% t() %>% as.matrix() %>% as.data.frame()
+lasso_df %<>% dplyr::select(-1) %>% mutate(lambda = est_lasso$lambda)
+lasso_df %<>% gather(key = "variable", value = "coefficient", -lambda)
+ggplot(
+  data = lasso_df,
+  aes(x = lambda, y = coefficient, color = variable)
+) +
+geom_line() +
+scale_x_continuous(
+  expression(lambda),
+  labels = c("0.1", "10", "1,000", "100,000"),
+  breaks = c(0.1, 10, 1000, 100000),
+  trans = "log10"
+) +
+scale_y_continuous("Lasso coefficient") +
+scale_color_viridis_d("Predictor", option = "magma", end = 0.9) +
+theme_minimal(base_size = 20, base_family = "Fira Sans Book") +
+theme(legend.position = "bottom")
+```
+---
+# Machine learning
+## Wrap up
+
+Now you understand the basic tenants of machine learning:
+
+- How **prediction** differs from causal inference
+- **Bias-variance tradeoff** (the benefits and costs of flexibility)
+- **Cross validation**: Performance and tuning
+- In- *vs.* out-of-sample **performance**
+
+---
+name: sources
+layout: false
+
+# Sources
+
+Sources (articles) of images
+
+- [Deep learning and radiology ](https://www.smart2zero.com/news/algorithm-beats-radiologists-diagnosing-x-rays)
+- [Parking lot detection](https://www.smart2zero.com/news/algorithm-beats-radiologists-diagnosing-x-rays)
+- [.it[New Yorker] writing](https://www.newyorker.com/magazine/2019/10/14/can-a-machine-learn-to-write-for-the-new-yorker)
+- [Gender Shades](http://gendershades.org/overview.html)
+
+I pulled the comic from [Twitter](https://twitter.com/athena_schools/status/1063013435779223553/photo/1).
+
+---
+exclude: true
+# Table of contents
+
+.col-left[
+.small[
+#### Admin
+- [Today and upcoming](#admin)
+
+#### Prediction
+- [What's difference?](#different)
+- [Graphical example](#graph-example)
+- [Tradeoffs](#tradeoffs)
+- [More goals](#more-goals)
+- [Examples](#example-articles)
+
+#### Other
+- [Image sources](#sources)
+]
+]
+
+---
+exclude: true
+
+```{r, generate pdfs, include = F, eval = F}
+pagedown::chrome_print("12-ml.html", output = "12-ml.pdf")
+pagedown::chrome_print("12-ml.html", output = "12-ml-nopause.pdf")
+```
