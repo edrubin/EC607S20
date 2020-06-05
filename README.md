@@ -172,7 +172,7 @@ The content of the lectures mainly follows *MHE* and [Michael Anderson](https://
 [.Rmd](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/11-randomization/11-randomization.Rmd)
 <br>**Readings:** MHE chapter 6 + C&T sections 25.6
 
-**[Lecture 12: Machine learning (in one lecture)](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/11-randomization/12-ml.html)**
+[**Lecture 12: Machine learning (in one lecture)**](https://raw.githack.com/edrubin/EC607S20/master/notes-lecture/11-randomization/12-ml.html)
 
 1. Prediction basics
 1. The bias-variance tradeoff
