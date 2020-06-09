@@ -288,9 +288,7 @@ Step 3: **Presentation of project pitch**
 
 ## Exams
 
-**Final** There will definitely be a take-home final exam.
-
-  **Midterm** We *may* have a take-home midterm exam.
+The [final](https://raw.githack.com/edrubin/EC607S20/master/final/final.pdf) exam is due Friday, 12 June 2020 by 11:59pm.
 
 ## Grades
 
