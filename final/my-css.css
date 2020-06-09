@@ -159,7 +159,7 @@
 }
 
 .mjx-chtml{
-  font-size: 102% !important;
+  font-size: 105% !important;
   line-height: 0% !important;
 }
 
@@ -278,4 +278,14 @@ table {
 }
 th, td {
   background-color: #ffffff;
+}
+
+/* Shift lists left */
+ul {
+  margin-left: -3em;
+  margin-top: -0.5em;
+}
+ol {
+  margin-left: -3em;
+  margin-top: -0.5em;
 }

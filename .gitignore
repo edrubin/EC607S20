@@ -7,9 +7,10 @@
 .Rapp.history
 
 project/001/submissions
+project/002/submissions
+project/003/notes-talks.txt
 
-problem-sets/003/003-problems.html
-problem-sets/003/003-problems.Rmd
-problem-sets/003/003-problems_cache
-problem-sets/003/003-problems_files
-problem-sets/003/003.Rproj
+final/final.Rmd
+final/final_files
+final/final.html
+final/ideas.txt
